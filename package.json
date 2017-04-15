@@ -1,7 +1,10 @@
 {
   "name": "rpi_ble",
   "version": "1.0.0",
-  "os" : ["darwin", "linux"],
+  "os": [
+    "darwin",
+    "linux"
+  ],
   "description": "BlockBee RPI BLE",
   "main": "start.js",
   "scripts": {
@@ -24,6 +27,7 @@
   "homepage": "https://github.com/moem-io/rpi_ble#readme",
   "dependencies": {
     "bleno": "^0.4.2",
-    "noble": "^1.8.0"
+    "noble": "^1.8.0",
+    "sequelize": "^3.30.4"
   }
 }

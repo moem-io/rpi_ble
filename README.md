@@ -9,7 +9,8 @@ Node must be Pre-Installed.
 
 # Start Process
 
-Before start, Type `source nd_venv/bin/activate` or `source .env` (If `Autoenv` is installed) to enter node environment.
+Before start, Type `source nd_venv/bin/activate` or `source .env`
+(If `Autoenv` is installed) to enter node environment.
 
 (node environment is required for setcap of `node`)
 
