@@ -1,0 +1,26 @@
+{
+  "name": "rpi_ble",
+  "version": "1.0.0",
+  "description": "BlockBee RPI BLE",
+  "main": "start.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moem-io/rpi_ble.git"
+  },
+  "keywords": [
+    "BLE"
+  ],
+  "author": "Daniel T. Lee",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/moem-io/rpi_ble/issues"
+  },
+  "homepage": "https://github.com/moem-io/rpi_ble#readme",
+  "dependencies": {
+    "bleno": "^0.4.2",
+    "noble": "^1.8.0"
+  }
+}
