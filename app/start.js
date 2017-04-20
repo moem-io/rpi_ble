@@ -1,6 +1,6 @@
 "use strict";
 
-var noble = require("noble");
+var cmds = require("./cmds");
 var models = require("./models");
 
 console.log(__dirname);
@@ -31,9 +31,3 @@ models.sql.sync().then(
     )
   )
 );
-
-models.sql.sync().then(
-  () => console.log(noble.state)
-);
-
-
