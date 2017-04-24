@@ -1,34 +1,29 @@
 var util = require('util');
 var bleno = require('bleno');
-var cmds = require('./cmds');
-
-var cmdsBase = require('./cmds-base');
+var cmdsBase = require('./../cmds-base');
 
 function CmdsHeaderChar(cmds) {
+  this.cmds = cmds;
   bleno.Characteristic.call(this, {
     uuid: cmdsBase.HeaderUuid,
     properties: ['read', 'write']
   });
-
-  this.cmds = cmds;
 }
 
 function CmdsDataChar(cmds) {
+  this.cmds = cmds;
   bleno.Characteristic.call(this, {
     uuid: cmdsBase.DataUuid,
     properties: ['read', 'write']
   });
-
-  this.cmds = cmds;
 }
 
 function CmdsResultChar(cmds) {
+  this.cmds = cmds;
   bleno.Characteristic.call(this, {
     uuid: cmdsBase.ResultUuid,
     properties: ['read', 'notify']
   });
-
-  this.cmds = cmds;
 }
 
 util.inherits(CmdsHeaderChar, bleno.Characteristic);

@@ -5,20 +5,10 @@ var noble = require('noble');
 var bleno = require('bleno');
 var cmdsBase = require('../cmds-base');
 
-const scanTimeout = 1000;
-
-var appState = {};
-
 var cmds = null;
 var cmdsCharHeader = null;
 var cmdsCharData = null;
 var cmdsCharResult = null;
-
-noble.on('stateChange', (state) => {
-  models.sql.sync().then(() =>
-    (state == 'poweredOn') ? cmdsStartScan() : noble.stopScanning()
-  )
-});
 
 noble.on('discover', (peripheral) => {
   console.log('found peripheral:', peripheral.advertisement.localName);
@@ -29,15 +19,15 @@ noble.on('scanStop', () => {
     (uuid) => {
       cmdsAddNode(noble._peripherals[uuid]);
       cmdsConn(noble._peripherals[uuid], sendHeader);
+      noble._peripherals[uuid].on('disconnect', () => console.log('PERIPHERAL DISCONNECT CALLBACK'))
     }
   );
   console.log("Scan Stopped");
-  if (appState.net.nodeCount == 0) {
+  if (appState.net.nodeCount === 0) {
     console.log("[Warning] : None Found. Restart Scanning.");
     cmdsStartScan();
   }
 });
-
 
 function cmdsAddNode(peripheral) {
   var p_addr = peripheral.address.replace(/:/g, '');
@@ -56,57 +46,26 @@ function cmdsAddNode(peripheral) {
   );
 }
 
-function devicePreset() {
-  appState = {
-    dev: {
-      id: 0,
-      addr: noble.address.replace(/:/g, ''),
-      dbId: null
-    },
-    net: {
-      nodeCount: 0,
-      disc: {}
-    },
-    rxP: {},
-    txP: {}
-  };
-
-  models.Nodes.create({
-    nodeNo: appState.net.nodeCount,
-    addr: noble.address.replace(/:/g, '')
-  }).then(
-    (model) => appState.dev.dbId = model.get('id')
-  );
-}
-
 function cmdsStartScan() {
-  if (Object.keys(appState).length == 0) {
-    devicePreset()
-  }
   noble.startScanning([cmdsBase.BaseUuid]);
-  setTimeout(() => noble.stopScanning(), scanTimeout);
+  setTimeout(() => noble.stopScanning(), cmdsBase.scanTimeout);
 }
 
 function cmdsConn(peripheral, p_func) {
-  peripheral.connect((err) => {
-
-    peripheral.discoverServices([cmdsBase.BaseUuid], (err, svc) => {
+  peripheral.connect(() => {
+    peripheral.discoverServices([cmdsBase.BaseUuid], (svc) => {
       svc.forEach((svc) => {
-
         if (svc.uuid !== cmdsBase.BaseUuid) {
-          svc.discoverCharacteristics([], (err, characteristics) => {
+          svc.discoverCharacteristics([], (characteristics) => {
             characteristics.forEach((char) => {
               var uuid = char.uuid.toUpperCase();
 
-              if (cmdsBase.HeaderUuid == uuid) {
+              if (cmdsBase.HeaderUuid === uuid)
                 cmdsCharHeader = char;
-              }
-              else if (cmdsBase.DataUuid == uuid) {
+              else if (cmdsBase.DataUuid === uuid)
                 cmdsCharData = char;
-              }
-              else if (cmdsBase.ResultUuid == uuid) {
+              else if (cmdsBase.ResultUuid === uuid)
                 cmdsCharResult = char;
-              }
             });
 
             if (cmdsCharHeader && cmdsCharData && cmdsCharResult) {
@@ -126,31 +85,109 @@ function cmdsConn(peripheral, p_func) {
 
 function resultEmitter(resultCode) {
   switch (resultCode) {
-    case cmdsBase.CmdsResult.IDLE:
+    case cmdsBase.ResultType.IDLE:
       console.log("Status : IDLE");
       sendHeader();
       break;
-    case cmdsBase.CmdsResult.HEADER:
+    case cmdsBase.ResultType.HEADER:
       console.log("Status : HEADER");
       sendData();
       break;
-    case cmdsBase.CmdsResult.DATA:
+    case cmdsBase.ResultType.DATA:
       console.log("Status : DATA");
       break;
-    case cmdsBase.CmdsResult.INTERPRET:
+    case cmdsBase.ResultType.INTERPRET:
       console.log("Status : INTERPRET");
       break;
-    case cmdsBase.CmdsResult.INTERPRET_ERROR:
+    case cmdsBase.ResultType.INTERPRET_ERROR:
       console.log("Status : INTERPRET_ERROR");
-      // resultEmitter(cmdsBase.CmdsResult.IDLE);
+      // resultEmitter(cmdsBase.ResultType.IDLE);
       break;
-    case cmdsBase.CmdsResult.ERROR:
+    case cmdsBase.ResultType.ERROR:
       console.log("Status : ERROR");
       break;
     default:
       console.log("Status : UNKNOWN");
       break;
   }
+}
+
+
+function PrimaryService(options) {
+  this.uuid = UuidUtil.removeDashes(options.uuid);
+  this.characteristics = options.characteristics || [];
+}
+
+function packetHeader(opt) {
+  var h = {
+    type: opt.headerType,
+    idx: opt.index,
+    idxTot: opt.indexTotal,
+    srcNode: opt.sourceNode,
+    srcSensor: opt.sourceSensor,
+    tgtNode: opt.targetNode,
+    tgtSensor: opt.targetSensor
+  };
+
+  var newHeader = new Buffer([h.type, h.idx, h.idxTot, h.srcNode, h.srcSensor, h.tgtNode, h.tgtSensor]);
+
+  return newHeader;
+}
+
+function packetBody(opt) {
+  var newBody;
+  var h = {
+    type: opt.headerType,
+    nodeAddr: opt.nodeAddr
+  };
+
+  switch (h.type) {
+    case cmdsBase.BuildType.SCAN_REQUEST:
+      newBody = new Buffer(h.nodeId);
+      break;
+  }
+
+  return newBody;
+}
+
+function buildPacket(headerType, arg) {
+  var packet = {header: null, body: null};
+  switch (headerType) {
+    case cmdsBase.BuildType.SCAN_REQUEST:
+      packet.header = packetHeader({
+        headerType: headerType,
+        index: 1,
+        indexTotal: 1,
+        sourceNode: appState.dev.id,
+        sourceSensor: 0,
+        targetNode: arg.nodeId,
+        targetSensor: 0
+      });
+
+      models.Nodes.findOne({where: {id: arg.nodeId}}).then((node) =>
+        packet.body = packetBody({
+          headerType: headerType,
+          nodeAddr: node.addr
+        })
+      );
+      break;
+
+    case cmdsBase.BuildType.SENSOR_DATA_REQUEST:
+      break;
+    case cmdsBase.BuildType.NETWORK_ACK_REQUEST:
+      break;
+    case cmdsBase.BuildType.NETWORK_JOIN_REQUEST:
+      break;
+    default:
+      break;
+  }
+
+
+  return null;
+}
+
+function buildData() {
+  return Buffer([]);
 }
 
 function sendHeader() {
@@ -161,7 +198,7 @@ function sendHeader() {
 }
 
 function sendData() {
-  var data = new Buffer([0x01, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00]);
+  var data = new Buffer([0xE5, 0x57, 0xE9, 0x41, 0x7A, 0xE3]);
   cmdsCharData.write(data, false, (err) => {
     (!err) ? console.log("Data Send Complete") : console.log(err);
   });
@@ -197,14 +234,14 @@ function bakePizza() {
           //
           pizzaBakeCharacteristic.on('read', function (data, isNotification) {
             console.log('Our peripheral is ready!');
-            if (data.length == 1) {
+            if (data.length === 1) {
               var result = data.readUInt8(0);
               console.log('The result is',
-                result == pizza.PizzaBakeResult.HALF_BAKED ? 'half baked.' :
-                  result == pizza.PizzaBakeResult.BAKED ? 'baked.' :
-                    result == pizza.PizzaBakeResult.CRISPY ? 'crispy.' :
-                      result == pizza.PizzaBakeResult.BURNT ? 'burnt.' :
-                        result == pizza.PizzaBakeResult.ON_FIRE ? 'on fire!' :
+                result === pizza.PizzaBakeResult.HALF_BAKED ? 'half baked.' :
+                  result === pizza.PizzaBakeResult.BAKED ? 'baked.' :
+                    result === pizza.PizzaBakeResult.CRISPY ? 'crispy.' :
+                      result === pizza.PizzaBakeResult.BURNT ? 'burnt.' :
+                        result === pizza.PizzaBakeResult.ON_FIRE ? 'on fire!' :
                           'unknown?');
             }
             else {
@@ -236,4 +273,4 @@ function bakePizza() {
   })
 }
 
-module.exports = noble;
+module.exports.startScan = cmdsStartScan;

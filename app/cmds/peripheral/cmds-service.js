@@ -1,6 +1,6 @@
 var util = require('util');
 var bleno = require('bleno');
-var CmdsBase = require('./cmds-base');
+var CmdsBase = require('./../cmds-base');
 var CmdsChar = require('./cmds-char');
 
 function CmdsService(cmds) {
