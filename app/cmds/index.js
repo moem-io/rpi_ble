@@ -8,6 +8,7 @@ var noble = require('noble');
 var bleno = require('bleno');
 
 var cmdsC = require('./central');
+var cmdsP = require('./peripheral');
 
 var CmdsBle = function () {
   events.EventEmitter.call(this);
@@ -34,10 +35,12 @@ var onInit = function () {
 };
 
 function devicePreset() {
-  appState = {
+  var addr = noble.address.replace(/:/g, '');
+  console.log("My ADDR : " + addr);
+  global.appState = {
     dev: {
       id: 0,
-      addr: noble.address.replace(/:/g, ''),
+      addr: addr,
       dbId: null
     },
     net: {
@@ -45,6 +48,8 @@ function devicePreset() {
       disc: {}
     },
     rxP: {
+      headerCount: 0,
+      dataCount: 0,
       totalCount: 0,
       processCount: 0,
     },
@@ -74,18 +79,13 @@ var onStandBy = function (callback) {
   });
 };
 
-var onPStandBy = function () {
-  cmdsC.startScan();
-  console.log('Radio turned on!!');
-};
-
 var onCStandBy = function () {
   console.log('Channel has been changed to');
 };
 
-var onPStop = function () {
-  bleno.stopAdvertising();
-  console.log('Peripheral Stop Advertising!');
+var onPStandBy = function () {
+  cmdsP.startAdvertising();
+  console.log('Peripheral Start Advertising');
 };
 
 var onCStop = function () {
@@ -99,10 +99,7 @@ cmdsBle.on('standBy', onStandBy);
 
 cmdsBle.on('pStandBy', onPStandBy);
 cmdsBle.on('cStandBy', onCStandBy);
-cmdsBle.on('pStop', onPStop);
-cmdsBle.on('cStop', onCStop);
+// cmdsBle.on('pStop', onPStop);
+// cmdsBle.on('cStop', onCStop);
 
 cmdsBle.emit('init');
-
-
-// module.exports = noble;

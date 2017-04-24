@@ -3,15 +3,16 @@ var bleno = require('bleno');
 var CmdsBase = require('./../cmds-base');
 var CmdsChar = require('./cmds-char');
 
-function CmdsService(cmds) {
+function CmdsService() {
   bleno.PrimaryService.call(this, {
     uuid: CmdsBase.BaseUuid,
     characteristics: [
-      new CmdsChar.Header(cmds),
-      new CmdsChar.Data(cmds),
-      new CmdsChar.Result(cmds)
+      new CmdsChar.Header(this),
+      new CmdsChar.Data(this),
+      new CmdsChar.Result(this)
     ]
   });
+  this.resultUpdateHandler = null;
 }
 
 util.inherits(CmdsService, bleno.PrimaryService);

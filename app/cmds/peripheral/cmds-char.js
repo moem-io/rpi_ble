@@ -2,24 +2,24 @@ var util = require('util');
 var bleno = require('bleno');
 var cmdsBase = require('./../cmds-base');
 
-function CmdsHeaderChar(cmds) {
-  this.cmds = cmds;
+function CmdsHeaderChar(that) {
+  this.cmds = that;
   bleno.Characteristic.call(this, {
     uuid: cmdsBase.HeaderUuid,
     properties: ['read', 'write']
   });
 }
 
-function CmdsDataChar(cmds) {
-  this.cmds = cmds;
+function CmdsDataChar(that) {
+  this.cmds = that;
   bleno.Characteristic.call(this, {
     uuid: cmdsBase.DataUuid,
     properties: ['read', 'write']
   });
 }
 
-function CmdsResultChar(cmds) {
-  this.cmds = cmds;
+function CmdsResultChar(that) {
+  this.cmds = that;
   bleno.Characteristic.call(this, {
     uuid: cmdsBase.ResultUuid,
     properties: ['read', 'notify']
@@ -41,45 +41,37 @@ function validateWrite(data, offset, callback, dataLength) {
 
 CmdsHeaderChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 7);
-  var crust = data.readUInt8(0);
-  console.log(crust);
-  switch (crust) {
-    case cmds.CmdsHeader.THIN:
-      this.cmds.crust = crust;
-      callback(this.RESULT_SUCCESS);
-      break;
-    default:
-      callback(this.RESULT_UNLIKELY_ERROR);
-      break;
-  }
+  appState.rxP[appState.rxP.totalCount] = {header: data};
+  appState.rxP.headerCount++;
+
+  var resultCode = new Buffer([cmdsBase.ResultType.HEADER])
+
+  this.cmds.resultUpdateHandler(resultCode);
+  callback(this.RESULT_SUCCESS);
 };
 
 CmdsDataChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 20);
-  this.cmds.toppings = data.readUInt16BE(0);
+  appState.rxP[appState.rxP.totalCount] = {data: data};
+  appState.rxP.dataCount++;
+
+  if (appState.rxP.dataCount === appState.rxP.headerCount) {
+    appState.rxP.totalCount++;
+  }
+
+  var resultCode = new Buffer([cmdsBase.ResultType.DATA])
+  this.cmds.resultUpdateHandler(resultCode);
+
+  resultCode = new Buffer([cmdsBase.ResultType.INTERPRET])
+  this.cmds.resultUpdateHandler(resultCode);
+
   callback(this.RESULT_SUCCESS);
 };
 
-CmdsResultChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
-  if (offset) {
-    callback(this.RESULT_ATTR_NOT_LONG);
-  }
-  else if (data.length !== 2) {
-    callback(this.RESULT_INVALID_ATTRIBUTE_LENGTH);
-  }
-  else {
-    var temperature = data.readUInt16BE(0);
-    var self = this;
-    this.cmds.once('ready', function (result) {
-      if (self.updateValueCallback) {
-        var data = new Buffer(1);
-        data.writeUInt8(result, 0);
-        self.updateValueCallback(data);
-      }
-    });
-    this.cmds.bakeRslt(temperature);
-    callback(this.RESULT_SUCCESS);
-  }
+CmdsResultChar.prototype.onSubscribe = function (maxSize, updateValueCallback) {
+  this.cmds.resultUpdateHandler = updateValueCallback;
+  var resultCode = new Buffer([cmdsBase.ResultType.IDLE])
+  this.cmds.resultUpdateHandler(resultCode);
 };
 
 module.exports.Header = CmdsHeaderChar;
