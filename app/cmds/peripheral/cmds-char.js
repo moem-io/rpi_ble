@@ -62,6 +62,8 @@ CmdsDataChar.prototype.onWriteRequest = function (data, offset, withoutResponse,
   var resultCode = new Buffer([cmdsBase.ResultType.DATA])
   this.cmds.resultUpdateHandler(resultCode);
 
+  //TODO: emit ('packet Interpret');
+
   resultCode = new Buffer([cmdsBase.ResultType.INTERPRET])
   this.cmds.resultUpdateHandler(resultCode);
 

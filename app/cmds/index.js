@@ -67,20 +67,19 @@ function devicePreset() {
   );
 }
 
-var onStandBy = function (callback) {
+var onStandBy = function () {
   if (!appState) {
     devicePreset();
   }
   models.sql.sync().then(() => {
-    if (appState.txP.totalCount > appState.txP.processCount)
+    this.emit('pStandBy');
+    if (!appState.dev.nodeCount)
       this.emit('cStandBy');
+    else if (appState.txP.totalCount > appState.txP.processCount)
+      this.emit('cSendPacket');
     else
-      this.emit('pStandBy');
+      this.emit('cStop');
   });
-};
-
-var onCStandBy = function () {
-  console.log('Channel has been changed to');
 };
 
 var onPStandBy = function () {
@@ -88,18 +87,56 @@ var onPStandBy = function () {
   console.log('Peripheral Start Advertising');
 };
 
+var onCStandBy = function () {
+  cmdsC.startScanning();
+  console.log('Central Start scanning network');
+};
+
+var getTarget = function (count) {
+  return appState.txP[count].header.readUInt8(5);
+};
+
+var findRoute = function (target) {
+  if (target in appState.net.disc) {
+    return appState.net.disc[target];
+  } else {
+    //TODO: make more elaborate
+  }
+};
+
+var onCSend = function () {
+  console.log("Dispatching Packet");
+  var targetNo = getTarget(appState.txP.processCount);
+  cmdsC.cmdsConn(findRoute(targetNo));
+};
+
 var onCStop = function () {
   noble.stopScanning();
   console.log('Central Stop Scanning');
 };
 
+var onSendReady = function () {
+  cmdsBle.emit('cSend');
+};
+
+var onSendDone = function () {
+  if (!appState.txP.totalCount > appState.txP.processCount) {
+    noble.emit('sendReady');
+  }
+  //TODO : if more to send, fix this.
+};
 
 cmdsBle.on('init', onInit);
 cmdsBle.on('standBy', onStandBy);
 
 cmdsBle.on('pStandBy', onPStandBy);
 cmdsBle.on('cStandBy', onCStandBy);
-// cmdsBle.on('pStop', onPStop);
-// cmdsBle.on('cStop', onCStop);
+
+cmdsBle.on('cSend', onCSend);
+cmdsBle.on('cStop', onCStop);
+
+noble.on('sendReady', onSendReady);
+noble.on('sendDone', onSendDone);
+
 
 cmdsBle.emit('init');
