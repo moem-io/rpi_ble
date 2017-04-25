@@ -12,6 +12,8 @@ var cmdsP = require('./peripheral');
 
 var packetInterpret = require('./packet/interpret');
 
+var query = require('./query');
+
 var CmdsBle = function () {
   events.EventEmitter.call(this);
 };
@@ -22,7 +24,7 @@ var cmdsBle = new CmdsBle();
 global.appState = null;
 
 var onInit = function () {
-  console.log("on StandBy Mode");
+  console.log("on Init Mode");
   setTimeout(() => {
     models.sql.sync().then(() => {
       if (noble.state === 'poweredOn' && bleno.state === 'poweredOn') {
@@ -61,12 +63,7 @@ function devicePreset() {
     }
   };
 
-  models.Nodes.create({
-    nodeNo: appState.net.nodeCount,
-    addr: noble.address.replace(/:/g, '')
-  }).then(
-    (model) => appState.dev.dbId = model.get('id')
-  );
+  query.addNode(addr);
 }
 
 var onStandBy = function () {
@@ -76,21 +73,21 @@ var onStandBy = function () {
   models.sql.sync().then(() => {
     this.emit('pStandBy');
     if (!appState.dev.nodeCount)
-      this.emit('cStandBy');
+      this.emit('cScan');
     else if (appState.txP.totalCount > appState.txP.processCount)
       this.emit('cSendPacket');
     else
-      this.emit('cStop');
+      this.emit('cStandBy');
   });
 };
 
 var onPStandBy = function () {
-  cmdsP.startAdvertising();
+  cmdsP.startAdvertise();
   console.log('Peripheral Start Advertising');
 };
 
-var onCStandBy = function () {
-  cmdsC.startScanning();
+var onCScan = function () {
+  cmdsC.startScan();
   console.log('Central Start scanning network');
 };
 
@@ -102,7 +99,7 @@ var findRoute = function (target) {
   if (target in appState.net.disc) {
     return appState.net.disc[target];
   } else {
-    //TODO: make more elaborate
+    //TODO: make more elaborate - find route from DB.
   }
 };
 
@@ -112,7 +109,7 @@ var onCSend = function () {
   cmdsC.cmdsConn(findRoute(targetNo));
 };
 
-var onCStop = function () {
+var oncStandBy = function () {
   noble.stopScanning();
   console.log('Central Stop Scanning');
 };
@@ -142,11 +139,11 @@ cmdsBle.on('init', onInit);
 cmdsBle.on('standBy', onStandBy);
 
 cmdsBle.on('pStandBy', onPStandBy);
-cmdsBle.on('cStandBy', onCStandBy);
+cmdsBle.on('cScan', onCScan);
 
 cmdsBle.on('cSend', onCSend);
 
-cmdsBle.on('cStop', onCStop);
+cmdsBle.on('cStandBy', oncStandBy);
 
 noble.on('sendReady', onSendReady);
 noble.on('sendDone', onSendDone);

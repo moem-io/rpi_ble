@@ -1,8 +1,6 @@
 "use strict";
 
-var models = require("../../models");
 var noble = require('noble');
-var bleno = require('bleno');
 var cmdsBase = require('../cmds-base');
 var query = require('../query');
 
@@ -11,17 +9,22 @@ var cmdsCharHeader = null;
 var cmdsCharData = null;
 var cmdsCharResult = null;
 
+function cmdsStartScan() {
+  noble.startScanning([cmdsBase.BaseUuid]);
+  setTimeout(() => noble.stopScanning(), cmdsBase.scanTimeout);
+}
+
 noble.on('discover', (peripheral) => {
   console.log('found peripheral:', peripheral.advertisement.localName);
 });
 
 noble.on('scanStop', () => {
-  Object.keys(noble._peripherals).forEach(
-    (uuid) => {
-      cmdsAddNode(noble._peripherals[uuid]);
-    }
-  );
   console.log("Scan Stopped");
+  Object.keys(noble._peripherals).forEach((uuid) => {
+    if (cmdsAddNode(noble._peripherals[uuid]))
+      console.log("Node Add Success.");
+  });
+  
   if (appState.net.nodeCount === 0) {
     console.log("[Warning] : None Found. Restart Scanning.");
     cmdsStartScan();
@@ -40,10 +43,6 @@ function cmdsAddNode(peripheral) {
   //TODO : SCANNED NODE TESTING.
 }
 
-function cmdsStartScan() {
-  noble.startScanning([cmdsBase.BaseUuid]);
-  setTimeout(() => noble.stopScanning(), cmdsBase.scanTimeout);
-}
 
 function cmdsConn(peripheral) {
   peripheral.connect(() => {

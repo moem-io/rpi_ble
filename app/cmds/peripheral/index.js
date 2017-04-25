@@ -9,11 +9,11 @@ bleno.on('advertisingStart', () => bleno.setServices([cmdsService]));
 
 bleno.on('servicesSet', () => console.log('SVC set. Advertising'));
 
-bleno.on('disconnect', () => cmdsStartAdvertising());
+bleno.on('disconnect', () => cmdsStartAdvertise());
 
-function cmdsStartAdvertising() {
+function cmdsStartAdvertise() {
   bleno.startAdvertising(name, [cmdsService.uuid]);
   console.log("Start Advertising");
 }
 
-module.exports.startAdvertising = cmdsStartAdvertising;
+module.exports.startAdvertise = cmdsStartAdvertise;
