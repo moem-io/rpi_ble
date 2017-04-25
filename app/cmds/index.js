@@ -1,7 +1,7 @@
 "use strict";
 
-var events = require('events');
 var util = require('util');
+var events = require('events');
 var models = require("../models");
 
 var noble = require('noble');
@@ -9,6 +9,8 @@ var bleno = require('bleno');
 
 var cmdsC = require('./central');
 var cmdsP = require('./peripheral');
+
+var packetInterpret = require('./packet/interpret');
 
 var CmdsBle = function () {
   events.EventEmitter.call(this);
@@ -120,10 +122,20 @@ var onSendReady = function () {
 };
 
 var onSendDone = function () {
-  if (!appState.txP.totalCount > appState.txP.processCount) {
+  if (appState.txP.totalCount >= appState.txP.processCount) {
     noble.emit('sendReady');
   }
   //TODO : if more to send, fix this.
+};
+
+var onInterpretReady = function () {
+  packetInterpret.run();
+};
+
+var onInterpretDone = function () {
+  if (appState.rxP.totalCount >= appState.rxP.processCount) {
+    bleno.emit('interpretReady');
+  }
 };
 
 cmdsBle.on('init', onInit);
@@ -133,10 +145,13 @@ cmdsBle.on('pStandBy', onPStandBy);
 cmdsBle.on('cStandBy', onCStandBy);
 
 cmdsBle.on('cSend', onCSend);
+
 cmdsBle.on('cStop', onCStop);
 
 noble.on('sendReady', onSendReady);
 noble.on('sendDone', onSendDone);
 
+bleno.on('interpretReady', onInterpretReady);
+bleno.on('interpretDone', onInterpretDone);
 
 cmdsBle.emit('init');

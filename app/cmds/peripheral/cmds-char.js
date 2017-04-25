@@ -42,6 +42,7 @@ function validateWrite(data, offset, callback, dataLength) {
 CmdsHeaderChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 7);
   appState.rxP[appState.rxP.totalCount] = {header: data};
+  //TODO : ERROR CHECK IF OBJECT IS NOT INITIALIZED.
   appState.rxP.headerCount++;
 
   var resultCode = new Buffer([cmdsBase.ResultType.HEADER])
@@ -57,17 +58,28 @@ CmdsDataChar.prototype.onWriteRequest = function (data, offset, withoutResponse,
 
   if (appState.rxP.dataCount === appState.rxP.headerCount) {
     appState.rxP.totalCount++;
+
+
+    var resultCode = new Buffer([cmdsBase.ResultType.DATA]);
+    this.cmds.resultUpdateHandler(resultCode);
+
+    bleno.emit('interpretReady');
+
+    bleno.on('interpretDone', () => {
+      resultCode = new Buffer([cmdsBase.ResultType.INTERPRET]);
+      console.error("this Error?");
+      //TODO: this object?
+      this.cmds.resultUpdateHandler(resultCode);
+    });
+
+    callback(this.RESULT_SUCCESS);
+  } else {
+    resultCode = new Buffer([cmdsBase.ResultType.ERROR]);
+    this.cmds.resultUpdateHandler(resultCode);
+
+    //TODO: ERROR HANDLING.
+    callback(this.RESULT_UNLIKELY_ERROR);
   }
-
-  var resultCode = new Buffer([cmdsBase.ResultType.DATA])
-  this.cmds.resultUpdateHandler(resultCode);
-
-  //TODO: emit ('packet Interpret');
-
-  resultCode = new Buffer([cmdsBase.ResultType.INTERPRET])
-  this.cmds.resultUpdateHandler(resultCode);
-
-  callback(this.RESULT_SUCCESS);
 };
 
 CmdsResultChar.prototype.onSubscribe = function (maxSize, updateValueCallback) {

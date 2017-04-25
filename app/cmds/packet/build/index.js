@@ -68,4 +68,4 @@ function buildPacket(headerType, arg) {
   appState.txP.totalCount++;
 }
 
-module.exports.build = buildPacket;
+module.exports.run = buildPacket;

@@ -4,7 +4,7 @@ var models = require("../../models");
 var noble = require('noble');
 var bleno = require('bleno');
 var cmdsBase = require('../cmds-base');
-var packetBuild = require('../packet/build');
+var query = require('../query');
 
 var cmds = null;
 var cmdsCharHeader = null;
@@ -32,23 +32,12 @@ noble.on('scanStop', () => {
 });
 
 function cmdsAddNode(peripheral) {
-  var pAddr = peripheral.address.replace(/:/g, '');
+  var addr = peripheral.address.replace(/:/g, '');
   appState.net.nodeCount++;
   appState.net.disc[appState.net.nodeCount] = peripheral;
 
-  models.Nodes.create({
-    nodeNo: appState.net.nodeCount,
-    addr: pAddr
-  }).then(
-    (model) => {
-      packetBuild.build(cmdsBase.BuildType.SCAN_REQUEST, model.get('nodeNo'));
-      models.Networks.create({
-        parent: appState.dev.dbId,
-        child: model.get('id'),
-        rssi: peripheral.rssi
-      });
-    }
-  );
+  query.addScanedNode(addr, peripheral.rssi);
+  //TODO : SCANNED NODE TESTING.
 }
 
 function cmdsStartScan() {
@@ -134,3 +123,4 @@ function sendData() {
 }
 
 module.exports.startScan = cmdsStartScan;
+module.exports.cmdsConn = cmdsConn;

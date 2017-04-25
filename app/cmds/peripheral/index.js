@@ -1,5 +1,3 @@
-var util = require('util');
-var events = require('events');
 var bleno = require('bleno');
 
 var CmdsService = require('./cmds-service');
