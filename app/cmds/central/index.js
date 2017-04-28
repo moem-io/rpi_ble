@@ -20,11 +20,25 @@ noble.on('discover', (peripheral) => {
 
 noble.on('scanStop', () => {
   console.log("Scan Stopped");
-  Object.keys(noble._peripherals).forEach((uuid) => {
-    if (cmdsAddNode(noble._peripherals[uuid]))
-      console.log("Node Add Success.");
-  });
-  
+
+  var count = 0;
+  var total = Object.keys(noble._peripherals).length;
+
+  if (total) {
+    Object.keys(noble._peripherals).forEach((uuid) => {
+      cmdsAddNode(noble._peripherals[uuid], () => {
+        count++;
+        if (total === count) {
+          noble.emit('scanResult');
+        }
+      })
+    });
+  } else {
+    noble.emit('scanResult');
+  }
+});
+
+noble.on('scanResult', () => {
   if (appState.net.nodeCount === 0) {
     console.log("[Warning] : None Found. Restart Scanning.");
     cmdsStartScan();
@@ -34,15 +48,14 @@ noble.on('scanStop', () => {
   }
 });
 
-function cmdsAddNode(peripheral) {
+function cmdsAddNode(peripheral, callback) {
   var addr = peripheral.address.replace(/:/g, '');
   appState.net.nodeCount++;
   appState.net.disc[appState.net.nodeCount] = peripheral;
 
-  query.addScanedNode(addr, peripheral.rssi);
+  query.addScanedNode(addr, peripheral.rssi, callback);
   //TODO : SCANNED NODE TESTING.
 }
-
 
 function cmdsConn(peripheral) {
   peripheral.connect(() => {

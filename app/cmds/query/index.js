@@ -1,6 +1,6 @@
 var models = require("../../models");
 var packetBuild = require('../packet/build');
-var cmdBase = require('../cmds-base');
+var cmdsBase = require('../cmds-base');
 
 var addNode = function (addr) {
   models.Nodes.findOne({where: {addr: addr}}).then((nodes) => {
@@ -12,8 +12,7 @@ var addNode = function (addr) {
   });
 };
 
-var addScanedNode = function (addr, rssi) {
-  var success = null;
+var addScanedNode = function (addr, rssi, callback) {
   models.Nodes.findOne({where: {addr: addr}}).then((nodes) => {
     if (!nodes) {
       models.Nodes.create({nodeNo: appState.net.nodeCount, addr: addr}).then((model) => {
@@ -22,14 +21,10 @@ var addScanedNode = function (addr, rssi) {
           parent: appState.dev.dbId,
           child: model.get('id'),
           rssi: rssi
-        }).then(() => {
-          success = true;
-        });
+        }).then(() => callback());
       });
     }
   });
-
-  return success;
 };
 
 module.exports.addNode = addNode;
