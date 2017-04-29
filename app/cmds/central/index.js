@@ -1,8 +1,8 @@
 "use strict";
 
 var noble = require('noble');
-var cmdsBase = require('../cmds-base');
 var query = require('../query');
+var cmdsBase = require('../cmds-base');
 
 var cmds = null;
 var cmdsCharHeader = null;
@@ -20,19 +20,17 @@ noble.on('discover', (peripheral) => {
 
 noble.on('scanStop', () => {
   console.log("Scan Stopped");
-
   var count = 0;
   var total = Object.keys(noble._peripherals).length;
 
   if (total) {
-    Object.keys(noble._peripherals).forEach((uuid) => {
-      cmdsAddNode(noble._peripherals[uuid], () => {
+    Promise.all(Object.keys(noble._peripherals).map((uuid) => {
+      return cmdsAddNode(noble._peripherals[uuid], () => {
         count++;
-        if (total === count) {
+        if (count === total)
           noble.emit('scanResult');
-        }
-      })
-    });
+      });
+    }));
   } else {
     noble.emit('scanResult');
   }
@@ -53,7 +51,7 @@ function cmdsAddNode(peripheral, callback) {
   appState.net.nodeCount++;
   appState.net.disc[appState.net.nodeCount] = peripheral;
 
-  query.addScanedNode(addr, peripheral.rssi, callback);
+  query.addScanedNode(appState.net.nodeCount, addr, peripheral.rssi, callback);
   //TODO : SCANNED NODE TESTING.
 }
 

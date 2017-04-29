@@ -28,9 +28,9 @@ function tableInit() {
   });
 }
 
-sql.sync({force: true}).then(() => tableInit());
+// sql.sync({force: true}).then(() => tableInit());
 
-/*tableInit();*/
+tableInit();
 
 db.sql = sql;
 db.SQL = SQL;

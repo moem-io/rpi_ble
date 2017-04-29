@@ -1,4 +1,5 @@
 var models = require("../../../models");
+var cmdsBase = require("../../cmds-base");
 
 function packetHeader(opt) {
   var h = {
@@ -25,14 +26,14 @@ function packetBody(opt) {
 
   switch (h.type) {
     case cmdsBase.BuildType.SCAN_REQUEST:
-      newBody = new Buffer(h.nodeId);
+      newBody = new Buffer(h.nodeAddr);
       break;
   }
 
   return newBody;
 }
 
-function buildPacket(headerType, arg) {
+function buildPacket(headerType, arg, callback) {
   var packet = {header: null, data: null};
   switch (headerType) {
     case cmdsBase.BuildType.SCAN_REQUEST:
@@ -46,12 +47,15 @@ function buildPacket(headerType, arg) {
         targetSensor: 0
       });
 
-      models.Nodes.findOne({where: {nodeNo: arg.nodeNo}}).then((node) =>
+      models.Nodes.findOne({where: {nodeNo: arg.nodeNo}}).then((node) => {
         packet.data = packetBody({
           headerType: headerType,
           nodeAddr: node.addr
         })
-      );
+      }).then(() => {
+        return callback();
+
+      });
       break;
 
     case cmdsBase.BuildType.SENSOR_DATA_REQUEST:
