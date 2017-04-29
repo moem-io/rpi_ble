@@ -1,4 +1,4 @@
-var models = require("../../../models");
+var db = require("../../../models");
 var cmdsBase = require("../../cmds-base");
 
 function packetHeader(opt) {
@@ -41,21 +41,18 @@ function buildPacket(headerType, arg, callback) {
         headerType: headerType,
         index: 1,
         indexTotal: 1,
-        sourceNode: appState.dev.id,
+        sourceNode: app.dev.id,
         sourceSensor: 0,
         targetNode: arg.nodeNo,
         targetSensor: 0
       });
 
-      models.Nodes.findOne({where: {nodeNo: arg.nodeNo}}).then((node) => {
-        packet.data = packetBody({
+      db.Nodes.findOne({where: {nodeNo: arg.nodeNo}}).then((node) => {
+        return packet.data = packetBody({
           headerType: headerType,
           nodeAddr: node.addr
         })
-      }).then(() => {
-        return callback();
-
-      });
+      }).then(() => callback());
       break;
 
     case cmdsBase.BuildType.SENSOR_DATA_REQUEST:
@@ -68,8 +65,8 @@ function buildPacket(headerType, arg, callback) {
       break;
   }
 
-  appState.txP[appState.txP.totalCount] = packet;
-  appState.txP.totalCount++;
+  app.txP[app.txP.totalCount] = packet;
+  app.txP.totalCount++;
 }
 
 module.exports.run = buildPacket;

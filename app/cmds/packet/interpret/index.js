@@ -2,8 +2,8 @@ var cmdsBase = require('../../cmds-base');
 var query = require('../../query');
 
 function interpretPacket() {
-  var header = appState.rxP[appState.rxP.processCount].header;
-  var data = appState.rxP[appState.rxP.processCount].data;
+  var header = app.rxP[app.rxP.processCount].header;
+  var data = app.rxP[app.rxP.processCount].data;
 
   switch (header.readUInt8(0)) {
     case cmdsBase.BuildType.SCAN_RESPONSE:
@@ -14,7 +14,7 @@ function interpretPacket() {
           var addr = data.toString('utf8', i, i + 5);
           var rssi = -(data.readUInt8(i + 6));
 
-          query.addScanedNode(addr, rssi);
+          query.addNode(, addr, rssi);
         }
       } else {
         console.error("Response None Found");
@@ -36,7 +36,7 @@ function interpretPacket() {
       break;
   }
 
-  appState.rxP.processCount++;
+  app.rxP.processCount++;
   bleno.emit('interpretDone');
 }
 

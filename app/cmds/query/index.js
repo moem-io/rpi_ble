@@ -1,30 +1,26 @@
-var models = require("../../models");
+var db = require("../../models");
 var cmdsBase = require('../cmds-base');
 var packetBuild = require('../packet/build');
 
-var addNode = function (addr) {
-  models.Nodes.findOne({where: {addr: addr}}).then((nodes) => {
-    return (!nodes) ? models.Nodes.create({nodeNo: 0, addr: addr}) : nodes
-  }).then((model) => appState.dev.dbId = model.get('id'));
+var addHub = function (addr) {
+  return db.Nodes.findOrCreate({where: {addr: addr}})
+    .spread((model) => app.dev.dbId = model.get('id'));
 };
 
-var addScanedNode = function (nodeNo, addr, rssi, callback) {
-  models.Nodes.findOne({where: {addr: addr}}).then((nodes) => {
-    if (!nodes) {
-      return models.Nodes.create({nodeNo: nodeNo, addr: addr})
-    }
-    //TODO: IF NONE There is Already Added?
-    // throw new Error("Already Added!");
-  }).then((model) => {
-    return models.Networks.create({
-      parent: appState.dev.dbId,
-      child: model.get('id'),
-      rssi: rssi
-    });
-  }).then(() => {
-    return packetBuild.run(cmdsBase.BuildType.SCAN_REQUEST, {nodeNo: nodeNo}, callback);
-  });
+var addNode = function (nodeNo, parentNo, addr, rssi) {
+  addr = addr.replace(/:/g, '');
+
+  return db.Nodes.findOrCreate({where: {addr: addr}, defaults: {nodeNo: nodeNo}})
+    .spread((c) => db.Nodes.find({where: {nodeNo: parentNo}})
+      .then((p) => db.Networks.findOrCreate({
+        where: {parent: p.get('id'), child: c.get('id')}, defaults: {rssi: rssi}
+      })))
+    .spread((net) => db.Networks.update({rssi: rssi}, {where: {id: net.get('id')}}));
+
+  // .spread(() => {
+  //   return packetBuild.run(cmdsBase.BuildType.SCAN_REQUEST, {nodeNo: nodeNo}, callback);
+  // });
 };
 
+module.exports.addHub = addHub;
 module.exports.addNode = addNode;
-module.exports.addScanedNode = addScanedNode;

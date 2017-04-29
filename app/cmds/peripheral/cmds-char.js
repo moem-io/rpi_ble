@@ -31,19 +31,15 @@ util.inherits(CmdsDataChar, bleno.Characteristic);
 util.inherits(CmdsResultChar, bleno.Characteristic);
 
 function validateWrite(data, offset, callback, dataLength) {
-  if (offset) {
-    callback(this.RESULT_ATTR_NOT_LONG);
-  }
-  else if (data.length > dataLength) {
-    callback(this.RESULT_INVALID_ATTRIBUTE_LENGTH);
-  }
+  (offset) ? callback(this.RESULT_ATTR_NOT_LONG) :
+    (data.length > dataLength) ? callback(this.RESULT_INVALID_ATTRIBUTE_LENGTH) : '';
 }
 
 CmdsHeaderChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 7);
-  appState.rxP[appState.rxP.totalCount] = {header: data};
+  app.rxP[app.rxP.totalCount] = {header: data};
   //TODO : ERROR CHECK IF OBJECT IS NOT INITIALIZED.
-  appState.rxP.headerCount++;
+  app.rxP.headerCount++;
 
   var resultCode = new Buffer([cmdsBase.ResultType.HEADER])
 
@@ -53,11 +49,11 @@ CmdsHeaderChar.prototype.onWriteRequest = function (data, offset, withoutRespons
 
 CmdsDataChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 20);
-  appState.rxP[appState.rxP.totalCount] = {data: data};
-  appState.rxP.dataCount++;
+  app.rxP[app.rxP.totalCount] = {data: data};
+  app.rxP.dataCount++;
 
-  if (appState.rxP.dataCount === appState.rxP.headerCount) {
-    appState.rxP.totalCount++;
+  if (app.rxP.dataCount === app.rxP.headerCount) {
+    app.rxP.totalCount++;
 
 
     var resultCode = new Buffer([cmdsBase.ResultType.DATA]);

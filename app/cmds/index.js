@@ -2,7 +2,7 @@
 
 var util = require('util');
 var events = require('events');
-var models = require("../models");
+var db = require("../models");
 
 var noble = require('noble');
 var bleno = require('bleno');
@@ -21,12 +21,12 @@ var CmdsBle = function () {
 util.inherits(CmdsBle, events.EventEmitter);
 var cmdsBle = new CmdsBle();
 
-global.appState = null;
+global.app = null;
 
 var onInit = function () {
   console.log("on Init Mode");
   setTimeout(() => {
-    models.sql.sync().then(() => {
+    db.sql.sync().then(() => {
       if (noble.state === 'poweredOn' && bleno.state === 'poweredOn') {
         console.log("Ready State");
         this.emit('standBy');
@@ -41,7 +41,7 @@ var onInit = function () {
 function devicePreset() {
   var addr = noble.address.replace(/:/g, '');
   console.log("My ADDR : " + addr);
-  global.appState = {
+  global.app = {
     dev: {
       id: 0,
       addr: addr,
@@ -63,22 +63,20 @@ function devicePreset() {
     }
   };
 
-  query.addNode(addr);
+  return query.addHub(addr);
 }
 
 var onStandBy = function () {
-  if (!appState) {
-    devicePreset();
-  }
-  models.sql.sync().then(() => {
-    this.emit('pStandBy');
-    if (!appState.dev.nodeCount)
-      this.emit('cScan');
-    else if (appState.txP.totalCount > appState.txP.processCount)
-      this.emit('cSendPacket');
-    else
-      this.emit('cStandBy');
-  });
+  db.sql.sync().then(() => (!app) ? devicePreset() : '')
+    .then(() => {
+      this.emit('pStandBy');
+      if (!app.dev.nodeCount)
+        this.emit('cScan');
+      else if (app.txP.totalCount > app.txP.processCount)
+        this.emit('cSendPacket');
+      else
+        this.emit('cStandBy');
+    });
 };
 
 var onPStandBy = function () {
@@ -92,12 +90,12 @@ var onCScan = function () {
 };
 
 var getTarget = function (count) {
-  return appState.txP[count].header.readUInt8(5);
+  return app.txP[count].header.readUInt8(5);
 };
 
 var findRoute = function (target) {
-  if (target in appState.net.disc) {
-    return appState.net.disc[target];
+  if (target in app.net.disc) {
+    return app.net.disc[target];
   } else {
     //TODO: make more elaborate - find route from DB.
   }
@@ -105,7 +103,7 @@ var findRoute = function (target) {
 
 var onCSend = function () {
   console.log("Dispatching Packet");
-  var targetNo = getTarget(appState.txP.processCount);
+  var targetNo = getTarget(app.txP.processCount);
   cmdsC.cmdsConn(findRoute(targetNo));
 };
 
@@ -119,7 +117,7 @@ var onSendReady = function () {
 };
 
 var onSendDone = function () {
-  if (appState.txP.totalCount >= appState.txP.processCount) {
+  if (app.txP.totalCount >= app.txP.processCount) {
     noble.emit('sendReady');
   }
   //TODO : if more to send, fix this.
@@ -130,7 +128,7 @@ var onInterpretReady = function () {
 };
 
 var onInterpretDone = function () {
-  if (appState.rxP.totalCount >= appState.rxP.processCount) {
+  if (app.rxP.totalCount >= app.rxP.processCount) {
     bleno.emit('interpretReady');
   }
 };

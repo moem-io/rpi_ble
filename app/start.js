@@ -1,22 +1,22 @@
 "use strict";
 
-var cmds = require("./cmds");
-var models = require("./models");
+// var cmds = require("./cmds");
+var db = require('./models');
 
 console.log(__dirname);
 
-models.sql.sync().then(
+db.sql.sync().then(
   () => {
-    models.Nodes.create({
+    db.Nodes.create({
       nodeNo: 0,
       addr: '0123456789AB'
     });
-    models.Sensors.create({
+    db.Sensors.create({
       sensorNo: 1,
       type: "typeA",
       nodeId: 1
     });
-    models.Networks.create({
+    db.Networks.create({
       parent: 1,
       child: 2,
       rssi: 100
@@ -24,10 +24,17 @@ models.sql.sync().then(
   }
 );
 
-models.sql.sync().then(
-  () => models.Nodes.findAll().then(
+db.sql.sync().then(
+  () => db.Nodes.findAll().then(
     nodes => nodes.forEach(
       node => console.log(node.id, node.nodeNo, node.status)
     )
   )
+);
+
+db.sql.sync().then(
+  () => {
+    return db.Nodes.findOne({where: {id: 1199}}).then(
+      (nodes) => console.log(nodes)).catch((err) => console.log("err"));
+  }
 );

@@ -21,39 +21,23 @@ noble.on('discover', (peripheral) => {
 noble.on('scanStop', () => {
   console.log("Scan Stopped");
   var count = 0;
-  var total = Object.keys(noble._peripherals).length;
 
-  if (total) {
+  if (Object.keys(noble._peripherals).length) {
     Promise.all(Object.keys(noble._peripherals).map((uuid) => {
-      return cmdsAddNode(noble._peripherals[uuid], () => {
-        count++;
-        if (count === total)
-          noble.emit('scanResult');
-      });
-    }));
-  } else {
-    noble.emit('scanResult');
-  }
-});
+      var node = noble._peripherals[uuid];
+      app.net.nodeCount++;
+      app.net.disc[app.net.nodeCount] = node;
 
-noble.on('scanResult', () => {
-  if (appState.net.nodeCount === 0) {
-    console.log("[Warning] : None Found. Restart Scanning.");
+      return query.addNode(app.net.nodeCount, app.dev.id, node.address, node.rssi);
+    })).then(() => {
+      count++;
+      (count === Object.keys(noble._peripherals).length) ? noble.emit('sendReady') : '';
+    });
+  } else {
+    console.error("[Warning] : None Found. Restart Scanning.");
     cmdsStartScan();
   }
-  else {
-    noble.emit('sendReady');
-  }
 });
-
-function cmdsAddNode(peripheral, callback) {
-  var addr = peripheral.address.replace(/:/g, '');
-  appState.net.nodeCount++;
-  appState.net.disc[appState.net.nodeCount] = peripheral;
-
-  query.addScanedNode(appState.net.nodeCount, addr, peripheral.rssi, callback);
-  //TODO : SCANNED NODE TESTING.
-}
 
 function cmdsConn(peripheral) {
   peripheral.connect(() => {
@@ -102,7 +86,7 @@ function resultEmitter(resultCode) {
       break;
     case cmdsBase.ResultType.INTERPRET:
       console.log("Status : INTERPRET");
-      appState.txP.processCount++;
+      app.txP.processCount++;
       noble.emit('sendDone');
       break;
     case cmdsBase.ResultType.INTERPRET_ERROR:
@@ -119,14 +103,14 @@ function resultEmitter(resultCode) {
 }
 
 function sendHeader() {
-  var header = appState.txP[appState.txP.processCount].header;
+  var header = app.txP[app.txP.processCount].header;
   cmdsCharHeader.write(header, false, (err) =>
     (!err) ? console.log("Header Send Complete") : console.log(err)
   );
 }
 
 function sendData() {
-  var data = appState.txP[appState.txP.processCount].data;
+  var data = app.txP[app.txP.processCount].data;
   cmdsCharData.write(data, false, (err) => {
     (!err) ? console.log("Data Send Complete") : console.log(err);
   });
