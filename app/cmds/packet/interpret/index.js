@@ -1,24 +1,23 @@
-var cmdsBase = require('../../cmds-base');
+var cmdsBase = require('../../cmds_base');
+var pUtil = require('../../packet/util');
 var query = require('../../query');
 
 function interpretPacket() {
-  var header = app.rxP[app.rxP.processCount].header;
+  var header = pUtil.pHeader(app.rxP[app.rxP.processCount].header);
   var data = app.rxP[app.rxP.processCount].data;
 
-  switch (header.readUInt8(0)) {
+  switch (header.type) {
     case cmdsBase.BuildType.SCAN_RESPONSE:
-      var source = header.readUInt8(3);
-
       if (!data.length) {
         for (var i = 0; i < data.length; i++) {
           var addr = data.toString('utf8', i, i + 5);
           var rssi = -(data.readUInt8(i + 6));
+          app.net.nodeCount++;
 
-          query.addNode(, addr, rssi);
+          query.addNode(app.net.nodeCount, header.src, addr, rssi);
         }
       } else {
-        console.error("Response None Found");
-        //Todo: Error Handle.
+        console.log("End Node. None Found");
       }
       break;
 

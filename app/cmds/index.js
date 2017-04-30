@@ -10,7 +10,8 @@ var bleno = require('bleno');
 var cmdsC = require('./central');
 var cmdsP = require('./peripheral');
 
-var packetInterpret = require('./packet/interpret');
+var pInterpret = require('./packet/interpret');
+var pUtil = require('./packet/util');
 
 var query = require('./query');
 
@@ -89,10 +90,6 @@ var onCScan = function () {
   console.log('Central Start scanning network');
 };
 
-var getTarget = function (count) {
-  return app.txP[count].header.readUInt8(5);
-};
-
 var findRoute = function (target) {
   if (target in app.net.disc) {
     return app.net.disc[target];
@@ -103,8 +100,8 @@ var findRoute = function (target) {
 
 var onCSend = function () {
   console.log("Dispatching Packet");
-  var targetNo = getTarget(app.txP.processCount);
-  cmdsC.cmdsConn(findRoute(targetNo));
+  var header = pUtil.pHeader(app.txP[app.txP.processCount].header);
+  cmdsC.cmdsConn(findRoute(header.tgt));
 };
 
 var oncStandBy = function () {
@@ -124,7 +121,7 @@ var onSendDone = function () {
 };
 
 var onInterpretReady = function () {
-  packetInterpret.run();
+  pInterpret.run();
 };
 
 var onInterpretDone = function () {

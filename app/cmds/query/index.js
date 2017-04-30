@@ -1,6 +1,6 @@
 var db = require("../../models");
-var cmdsBase = require('../cmds-base');
-var packetBuild = require('../packet/build');
+var cmdsBase = require('../cmds_base');
+var pBuild = require('../packet/build');
 
 var addHub = function (addr) {
   return db.Nodes.findOrCreate({where: {addr: addr}})
@@ -15,11 +15,8 @@ var addNode = function (nodeNo, parentNo, addr, rssi) {
       .then((p) => db.Networks.findOrCreate({
         where: {parent: p.get('id'), child: c.get('id')}, defaults: {rssi: rssi}
       })))
-    .spread((net) => db.Networks.update({rssi: rssi}, {where: {id: net.get('id')}}));
-
-  // .spread(() => {
-  //   return packetBuild.run(cmdsBase.BuildType.SCAN_REQUEST, {nodeNo: nodeNo}, callback);
-  // });
+    .spread((net) => db.Networks.update({rssi: rssi}, {where: {id: net.get('id')}}))
+    .spread(() => pBuild.run(cmdsBase.BuildType.SCAN_REQUEST, nodeNo));
 };
 
 module.exports.addHub = addHub;

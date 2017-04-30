@@ -2,7 +2,9 @@
 
 var noble = require('noble');
 var query = require('../query');
-var cmdsBase = require('../cmds-base');
+var cmdsBase = require('../cmds_base');
+
+var pBuild = require('../packet/build');
 
 var cmds = null;
 var cmdsCharHeader = null;
@@ -14,46 +16,39 @@ function cmdsStartScan() {
   setTimeout(() => noble.stopScanning(), cmdsBase.scanTimeout);
 }
 
-noble.on('discover', (peripheral) => {
-  console.log('found peripheral:', peripheral.advertisement.localName);
+noble.on('discover', (node) => {
+  console.log('found node:', node.advertisement.localName);
 });
 
 noble.on('scanStop', () => {
   console.log("Scan Stopped");
-  var count = 0;
+  var nodes = Object.keys(noble._peripherals);
 
-  if (Object.keys(noble._peripherals).length) {
-    Promise.all(Object.keys(noble._peripherals).map((uuid) => {
+  if (nodes.length) {
+    Promise.all(nodes.map((uuid) => {
       var node = noble._peripherals[uuid];
       app.net.nodeCount++;
       app.net.disc[app.net.nodeCount] = node;
 
-      return query.addNode(app.net.nodeCount, app.dev.id, node.address, node.rssi);
-    })).then(() => {
-      count++;
-      (count === Object.keys(noble._peripherals).length) ? noble.emit('sendReady') : '';
-    });
+      return query.addNode(app.net.nodeCount, app.dev.id, node.address, node.rssi)
+    })).then(() => noble.emit('sendReady'));
   } else {
     console.error("[Warning] : None Found. Restart Scanning.");
     cmdsStartScan();
   }
 });
 
-function cmdsConn(peripheral) {
-  peripheral.connect(() => {
-    peripheral.discoverServices([cmdsBase.BaseUuid], (svc) => {
+function cmdsConn(node) {
+  node.connect(() => {
+    node.discoverServices([cmdsBase.BaseUuid], (svc) => {
       svc.forEach((svc) => {
         if (svc.uuid !== cmdsBase.BaseUuid) {
-          svc.discoverCharacteristics([], (characteristics) => {
-            characteristics.forEach((char) => {
+          svc.discoverCharacteristics([], (chars) => {
+            chars.forEach((char) => {
               var uuid = char.uuid.toUpperCase();
-
-              if (cmdsBase.HeaderUuid === uuid)
-                cmdsCharHeader = char;
-              else if (cmdsBase.DataUuid === uuid)
-                cmdsCharData = char;
-              else if (cmdsBase.ResultUuid === uuid)
-                cmdsCharResult = char;
+              (cmdsBase.HeaderUuid === uuid) ? cmdsCharHeader = char :
+                (cmdsBase.DataUuid === uuid) ? cmdsCharData = char :
+                  (cmdsBase.ResultUuid === uuid) ? cmdsCharResult = char : '';
             });
 
             if (cmdsCharHeader && cmdsCharData && cmdsCharResult) {
