@@ -99,8 +99,8 @@ var findRoute = function (target) {
 };
 
 var onCSend = function () {
-  console.log("Dispatching Packet");
   var header = pUtil.pHeader(app.txP[app.txP.processCount].header);
+  console.log("Dispatching Packet");
   cmdsC.cmdsConn(findRoute(header.tgt));
 };
 

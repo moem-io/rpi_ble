@@ -40,15 +40,15 @@ noble.on('scanStop', () => {
 
 function cmdsConn(node) {
   node.connect(() => {
-    node.discoverServices([cmdsBase.BaseUuid], (svc) => {
-      svc.forEach((svc) => {
+    node.discoverServices([cmdsBase.BaseUuid], (err, svcs) => {
+      svcs.forEach((svc) => {
         if (svc.uuid !== cmdsBase.BaseUuid) {
-          svc.discoverCharacteristics([], (chars) => {
+          svc.discoverCharacteristics([], (err, chars) => {
             chars.forEach((char) => {
               var uuid = char.uuid.toUpperCase();
-              (cmdsBase.HeaderUuid === uuid) ? cmdsCharHeader = char :
-                (cmdsBase.DataUuid === uuid) ? cmdsCharData = char :
-                  (cmdsBase.ResultUuid === uuid) ? cmdsCharResult = char : '';
+              cmdsBase.HeaderUuid === uuid ? cmdsCharHeader = char :
+                cmdsBase.DataUuid === uuid ? cmdsCharData = char :
+                  cmdsBase.ResultUuid === uuid ? cmdsCharResult = char : '';
             });
 
             if (cmdsCharHeader && cmdsCharData && cmdsCharResult) {

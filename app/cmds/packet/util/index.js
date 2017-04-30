@@ -24,12 +24,27 @@ var buildData = function (opt) {
 
   switch (h.type) {
     case cmdsBase.BuildType.SCAN_REQUEST:
-      return new Buffer(h.nodeAddr);
+      var buf = new Buffer(parseData(h.nodeAddr));
       break;
 
     default:
       break;
   }
+
+  return buf;
+};
+
+var parseData = function (data) {
+  var buf = {};
+  buf.length = Math.ceil(data.length / 2);
+  var bufIdx = 0;
+
+  for (var i = 0; i < data.length; i += 2) {
+    buf[bufIdx] = "0x" + data[i] + data[i + 1];
+    bufIdx++;
+  }
+
+  return buf
 };
 
 module.exports.bHeader = buildHeader;
