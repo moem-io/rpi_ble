@@ -115,7 +115,7 @@ var onSendReady = function () {
 
 var onSendDone = function () {
   (app.txP.totalCount > app.txP.processCount) ? noble.emit('sendReady') : '';
-  //TODO : if more to send, fix this.
+  //TODO : if more or wait for receive and send, fix this.
 };
 
 var onInterpretReady = function () {

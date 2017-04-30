@@ -8,6 +8,11 @@ module.exports = function (sql, SQL) {
       primaryKey: true,
       autoIncrement: true
     },
+    depth: {
+      type: SQL.INTEGER(3).UNSIGNED,
+      allowNull: false,
+      defaultValue: 0
+    },
     nodeNo: {
       type: SQL.INTEGER(3).UNSIGNED,
       allowNull: false,
