@@ -9,7 +9,10 @@ bleno.on('advertisingStart', () => bleno.setServices([cmdsService]));
 
 bleno.on('servicesSet', () => console.log('SVC set. Advertising'));
 
+bleno.on('accept', () => console.log("Central Connected"));
+
 bleno.on('disconnect', () => cmdsStartAdvertise());
+
 
 function cmdsStartAdvertise() {
   bleno.startAdvertising(name, [cmdsService.uuid]);

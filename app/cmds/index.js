@@ -45,6 +45,7 @@ function devicePreset() {
   global.app = {
     dev: {
       id: 0,
+      depth: 0,
       addr: addr,
       dbId: null
     },
@@ -91,17 +92,14 @@ var onCScan = function () {
 };
 
 var findRoute = function (target) {
-  if (target in app.net.disc) {
-    return app.net.disc[target];
-  } else {
-    //TODO: make more elaborate - find route from DB.
-  }
+  return query.getNode({nodeNo: target})
+    .then(node => (node.get('addr') in app.net.disc) ? app.net.disc[node.get('addr')] : reject("Not Found"))
 };
 
 var onCSend = function () {
   var header = pUtil.pHeader(app.txP[app.txP.processCount].header);
   console.log("Dispatching Packet");
-  cmdsC.cmdsConn(findRoute(header.tgt));
+  return findRoute(header.tgt).then((node) => cmdsC.cmdsConn(node));
 };
 
 var oncStandBy = function () {

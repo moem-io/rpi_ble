@@ -1,4 +1,4 @@
-var db = require("../../../models");
+var query = require('../../query');
 var pUtil = require('../../packet/util');
 var cmdsBase = require("../../cmds_base");
 
@@ -16,9 +16,8 @@ function buildPacket(type, target) {
           tgtSnsr: 0
         }));
 
-      var data = Promise.resolve(db.Nodes.findOne({where: {nodeNo: target}}).then((node) => {
-        return pUtil.bData({type: type, nodeAddr: node.addr})
-      }));
+      var data = Promise.resolve(query.getNode({nodeNo: target})
+        .then((node) => pUtil.bData({type: type, nodeAddr: node.addr})));
       break;
 
     case cmdsBase.BuildType.SENSOR_DATA_REQUEST:

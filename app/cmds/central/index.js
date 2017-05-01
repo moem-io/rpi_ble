@@ -27,10 +27,12 @@ noble.on('scanStop', () => {
   if (nodes.length) {
     Promise.all(nodes.map((uuid) => {
       var node = noble._peripherals[uuid];
-      app.net.nodeCount++;
-      app.net.disc[app.net.nodeCount] = node;
+      var nodeAddr = node.address.replace(/:/g, '');
 
-      return query.addNode(app.net.nodeCount, app.dev.id, node.address, node.rssi)
+      app.net.nodeCount++;
+      app.net.disc[nodeAddr] = node;
+
+      return query.addNode(app.net.nodeCount, app.dev.id, nodeAddr, node.rssi)
     })).then(() => noble.emit('sendReady'));
   } else {
     console.error("[Warning] : None Found. Restart Scanning.");

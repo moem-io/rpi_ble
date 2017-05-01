@@ -10,7 +10,7 @@ function interpretPacket() {
     case cmdsBase.BuildType.SCAN_RESPONSE:
       if (!data.length) {
         for (var i = 0; i < data.length; i++) {
-          var addr = data.toString('utf8', i, i + 5);
+          var addr = data.toString('utf8', i, i + 5); //TODO: uppercase?
           var rssi = -(data.readUInt8(i + 6));
           app.net.nodeCount++;
 
