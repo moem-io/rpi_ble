@@ -22,7 +22,7 @@ function CmdsResultChar(that) {
   this.cmds = that;
   bleno.Characteristic.call(this, {
     uuid: cmdsBase.ResultUuid,
-    properties: ['read', 'notify']
+    properties: ['read', 'write', 'notify']
   });
 }
 
@@ -37,11 +37,12 @@ function validateWrite(data, offset, callback, dataLength) {
 
 CmdsHeaderChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 7);
+  console.log("Header Added");
   app.rxP[app.rxP.totalCount] = {header: data};
   //TODO : ERROR CHECK IF OBJECT IS NOT INITIALIZED.
   app.rxP.headerCount++;
 
-  var resultCode = new Buffer([cmdsBase.ResultType.HEADER])
+  var resultCode = new Buffer([cmdsBase.ResultType.HEADER]);
 
   this.cmds.resultUpdateHandler(resultCode);
   callback(this.RESULT_SUCCESS);
@@ -49,6 +50,7 @@ CmdsHeaderChar.prototype.onWriteRequest = function (data, offset, withoutRespons
 
 CmdsDataChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 20);
+  console.log("Data Added");
   app.rxP[app.rxP.totalCount] = {data: data};
   app.rxP.dataCount++;
 
@@ -79,8 +81,9 @@ CmdsDataChar.prototype.onWriteRequest = function (data, offset, withoutResponse,
 };
 
 CmdsResultChar.prototype.onSubscribe = function (maxSize, updateValueCallback) {
+  console.log("Subscribe Complete");
   this.cmds.resultUpdateHandler = updateValueCallback;
-  var resultCode = new Buffer([cmdsBase.ResultType.IDLE])
+  var resultCode = new Buffer([cmdsBase.ResultType.IDLE]);
   this.cmds.resultUpdateHandler(resultCode);
 };
 

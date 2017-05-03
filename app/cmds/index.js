@@ -71,7 +71,7 @@ function devicePreset() {
 var onStandBy = function () {
   db.sql.sync().then(() => (!app) ? devicePreset() : '')
     .then(() => {
-      this.emit('pStandBy');
+      // this.emit('pStandBy');
       if (!app.dev.nodeCount)
         this.emit('cScan');
       else if (app.txP.totalCount > app.txP.processCount)
@@ -112,7 +112,7 @@ var onSendReady = function () {
 };
 
 var onSendDone = function () {
-  (app.txP.totalCount > app.txP.processCount) ? noble.emit('sendReady') : '';
+  (app.txP.totalCount > app.txP.processCount) ? noble.emit('sendReady') : cmdsBle.emit('pStandBy');
   //TODO : if more or wait for receive and send, fix this.
 };
 
