@@ -10,7 +10,7 @@ var cmdsCharData = null;
 var cmdsCharResult = null;
 
 function cmdsStartScan() {
-  noble.startScanning([cmdsBase.BaseUuid]);
+  noble.startScanning([cmdsBase.BaseUuid.toLowerCase()]);
   setTimeout(() => noble.stopScanning(), cmdsBase.scanTimeout);
 }
 
