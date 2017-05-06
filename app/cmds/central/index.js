@@ -4,15 +4,13 @@ var noble = require('noble');
 var query = require('../query');
 var cmdsBase = require('../cmds_base');
 
-var pBuild = require('../packet/build');
-
 var cmds = null;
 var cmdsCharHeader = null;
 var cmdsCharData = null;
 var cmdsCharResult = null;
 
 function cmdsStartScan() {
-  noble.startScanning([cmdsBase.BaseUuid]);
+  noble.startScanning([cmdsBase.BaseUuid.toLowerCase()]);
   setTimeout(() => noble.stopScanning(), cmdsBase.scanTimeout);
 }
 
