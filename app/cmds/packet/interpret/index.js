@@ -17,7 +17,7 @@ function interpretPacket() {
           query.addNode(app.net.nodeCount, header.src, addr, rssi);
         }
       } else {
-        console.log("End Node. None Found");
+        cmdsBase.log("End Node. None Found");
       }
       break;
 

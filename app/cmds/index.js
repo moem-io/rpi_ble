@@ -85,12 +85,12 @@ var onStandBy = function () {
 
 var onPStandBy = function () {
   cmdsP.startAdvertise();
-  bleno.log('Peripheral Start Advertising');
+  cmdsBle.log('Peripheral Start Advertising');
 };
 
 var onCScan = function () {
   cmdsC.startScan();
-  noble.log('Central Start scanning network');
+  cmdsBle.log('Central Start scanning network');
 };
 
 var findRoute = function (target) {
@@ -106,7 +106,7 @@ var onCSend = function () {
 
 var oncStandBy = function () {
   noble.stopScanning();
-  console.log('Central Stop Scanning');
+  cmdsBle.log('Central Stop Scanning');
 };
 
 var onSendReady = function () {

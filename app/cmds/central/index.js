@@ -14,9 +14,7 @@ function cmdsStartScan() {
   setTimeout(() => noble.stopScanning(), cmdsBase.scanTimeout);
 }
 
-noble.on('discover', (node) => {
-  noble.log('found node:' + node.advertisement.localName);
-});
+noble.on('discover', node => noble.log('found node:' + node.advertisement.localName));
 
 noble.on('scanStop', () => {
   noble.log("Scan Stopped");
@@ -42,9 +40,9 @@ noble.on('disconnect', () => noble.log("Peripheral Disconnected"));
 
 function cmdsConn(node) {
   node.connect(() => {
-    node.discoverServices([cmdsBase.BaseUuid], (err, svcs) => {
+    node.discoverServices([cmdsBase.BaseUuid,cmdsBase.BaseUuid.toLowerCase()], (err, svcs) => {
       svcs.forEach((svc) => {
-        if (svc.uuid !== cmdsBase.BaseUuid) {
+        if (svc.uuid.toUpperCase() === cmdsBase.BaseUuid) {
           svc.discoverCharacteristics([], (err, chars) => {
             chars.forEach((char) => {
               var uuid = char.uuid.toUpperCase();

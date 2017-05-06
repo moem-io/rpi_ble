@@ -17,14 +17,13 @@ bleno.on('accept', () => {
 });
 
 bleno.on('disconnect', () => {
-  bleno.log('Central Disconnected. Re-advertising');
   cmdsStartAdvertise();
+  bleno.log('Central Disconnected. Re-advertising');
 });
 
 
 function cmdsStartAdvertise() {
   bleno.startAdvertising(name, [cmdsService.uuid]);
-  bleno.log("Start Advertising");
 }
 
 module.exports.startAdvertise = cmdsStartAdvertise;
