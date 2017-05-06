@@ -16,6 +16,7 @@ var pUtil = require('./packet/util');
 var query = require('./query');
 
 var CmdsBle = function () {
+  this.log = (str) => console.log("[APP] " + str);
   events.EventEmitter.call(this);
 };
 
@@ -83,12 +84,12 @@ var onStandBy = function () {
 
 var onPStandBy = function () {
   cmdsP.startAdvertise();
-  console.log('Peripheral Start Advertising');
+  bleno.log('Peripheral Start Advertising');
 };
 
 var onCScan = function () {
   cmdsC.startScan();
-  console.log('Central Start scanning network');
+  noble.log('Central Start scanning network');
 };
 
 var findRoute = function (target) {
@@ -98,7 +99,7 @@ var findRoute = function (target) {
 
 var onCSend = function () {
   var header = pUtil.pHeader(app.txP[app.txP.processCount].header);
-  console.log("Dispatching Packet");
+  cmdsBle.log("Dispatching Packet");
   return findRoute(header.tgt).then((node) => cmdsC.cmdsConn(node));
 };
 
@@ -123,8 +124,12 @@ var onInterpretReady = function () {
 var onInterpretDone = function () {
   if (app.rxP.totalCount >= app.rxP.processCount) {
     bleno.emit('interpretReady');
+    cmdsBle.log('Start Interpreting');
   }
 };
+
+noble.log = (str) => console.log("[C] " + str);
+bleno.log = (str) => console.log("[P] " + str);
 
 cmdsBle.on('init', onInit);
 cmdsBle.on('standBy', onStandBy);

@@ -37,7 +37,7 @@ function validateWrite(data, offset, callback, dataLength) {
 
 CmdsHeaderChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 7);
-  console.log("Header Added");
+  bleno.log("Header Added");
   app.rxP[app.rxP.totalCount] = {header: data};
   //TODO : ERROR CHECK IF OBJECT IS NOT INITIALIZED.
   app.rxP.headerCount++;
@@ -50,7 +50,7 @@ CmdsHeaderChar.prototype.onWriteRequest = function (data, offset, withoutRespons
 
 CmdsDataChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 20);
-  console.log("Data Added");
+  bleno.log("Data Added");
   app.rxP[app.rxP.totalCount] = {data: data};
   app.rxP.dataCount++;
 
@@ -81,7 +81,7 @@ CmdsDataChar.prototype.onWriteRequest = function (data, offset, withoutResponse,
 };
 
 CmdsResultChar.prototype.onSubscribe = function (maxSize, updateValueCallback) {
-  console.log("Subscribe Complete");
+  bleno.log("Subscribe Complete");
   this.cmds.resultUpdateHandler = updateValueCallback;
   var resultCode = new Buffer([cmdsBase.ResultType.IDLE]);
   this.cmds.resultUpdateHandler(resultCode);

@@ -17,11 +17,11 @@ function cmdsStartScan() {
 }
 
 noble.on('discover', (node) => {
-  console.log('found node:', node.advertisement.localName);
+  noble.log('found node:' + node.advertisement.localName);
 });
 
 noble.on('scanStop', () => {
-  console.log("Scan Stopped");
+  noble.log("Scan Stopped");
   var nodes = Object.keys(noble._peripherals);
 
   if (nodes.length) {
@@ -35,10 +35,12 @@ noble.on('scanStop', () => {
       return query.addNode(app.net.nodeCount, app.dev.id, nodeAddr, node.rssi)
     })).then(() => noble.emit('sendReady'));
   } else {
-    console.error("[Warning] : None Found. Restart Scanning.");
+    noble.log("[Warning] : None Found. Restart Scanning.");
     cmdsStartScan();
   }
 });
+
+noble.on('disconnect', () => noble.log("Peripheral Disconnected"));
 
 function cmdsConn(node) {
   node.connect(() => {
@@ -54,12 +56,12 @@ function cmdsConn(node) {
             });
 
             if (cmdsCharHeader && cmdsCharData && cmdsCharResult) {
-              console.log('Found Service, Characteristic');
+              noble.log('Found Service, Characteristic');
               cmdsCharResult.on('data', (data, isNoti) => resultEmitter(data.readUInt8(0)));
-              cmdsCharResult.subscribe(() => console.log("Notification Enabled!"));
+              cmdsCharResult.subscribe(() => noble.log("Notification Enabled!"));
             }
             else {
-              console.log('missing characteristics');
+              noble.log('missing characteristics');
             }
           })
         }
@@ -71,30 +73,30 @@ function cmdsConn(node) {
 function resultEmitter(resultCode) {
   switch (resultCode) {
     case cmdsBase.ResultType.IDLE:
-      console.log("Status : IDLE");
+      noble.log("Status : IDLE");
       sendHeader();
       break;
     case cmdsBase.ResultType.HEADER:
-      console.log("Status : HEADER");
+      noble.log("Status : HEADER");
       sendData();
       break;
     case cmdsBase.ResultType.DATA:
-      console.log("Status : DATA");
+      noble.log("Status : DATA");
       break;
     case cmdsBase.ResultType.INTERPRET:
-      console.log("Status : INTERPRET");
+      noble.log("Status : INTERPRET");
       app.txP.processCount++;
       noble.emit('sendDone');
       break;
     case cmdsBase.ResultType.INTERPRET_ERROR:
-      console.log("Status : INTERPRET_ERROR");
+      noble.log("Status : INTERPRET_ERROR");
       //TODO: ERROR HANDLING. resultEmitter(cmdsBase.ResultType.IDLE);
       break;
     case cmdsBase.ResultType.ERROR:
-      console.log("Status : ERROR");
+      noble.log("Status : ERROR");
       break;
     default:
-      console.log("Status : UNKNOWN");
+      noble.log("Status : UNKNOWN");
       break;
   }
 }
@@ -102,14 +104,14 @@ function resultEmitter(resultCode) {
 function sendHeader() {
   var header = app.txP[app.txP.processCount].header;
   cmdsCharHeader.write(header, false, (err) =>
-    (!err) ? console.log("Header Send Complete") : console.log(err)
+    (!err) ? noble.log("Header Send Complete") : noble.log(err)
   );
 }
 
 function sendData() {
   var data = app.txP[app.txP.processCount].data;
   cmdsCharData.write(data, false, (err) => {
-    (!err) ? console.log("Data Send Complete") : console.log(err);
+    (!err) ? noble.log("Data Send Complete") : noble.log(err);
   });
 }
 
