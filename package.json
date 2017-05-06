@@ -26,9 +26,10 @@
   },
   "homepage": "https://github.com/moem-io/rpi_ble#readme",
   "dependencies": {
+    "bleno": "^0.4.2",
+    "flightplan": "^0.6.15",
     "mysql": "^2.13.0",
-    "sequelize": "^3.30.4",
     "noble": "^1.8.0",
-    "bleno": "^0.4.2"
+    "sequelize": "^3.30.4"
   }
 }

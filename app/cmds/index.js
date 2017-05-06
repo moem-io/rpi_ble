@@ -17,6 +17,7 @@ var query = require('./query');
 
 var CmdsBle = function () {
   this.log = (str) => console.log("[APP] " + str);
+  this.error = (str) => console.error("[APP] " + str);
   events.EventEmitter.call(this);
 };
 
@@ -26,14 +27,14 @@ var cmdsBle = new CmdsBle();
 global.app = null;
 
 var onInit = function () {
-  console.log("on Init Mode");
+  cmdsBle.log("on Init Mode");
   setTimeout(() => {
     db.sql.sync().then(() => {
       if (noble.state === 'poweredOn' && bleno.state === 'poweredOn') {
-        console.log("Ready State");
+        cmdsBle.log("Ready State");
         this.emit('standBy');
       } else {
-        console.error("Error Ready State");
+        cmdsBle.error("Error Ready State");
         this.emit('init');
       }
     });
@@ -42,7 +43,7 @@ var onInit = function () {
 
 function devicePreset() {
   var addr = noble.address.replace(/:/g, '');
-  console.log("My ADDR : " + addr);
+  cmdsBle.log("My ADDR : " + addr);
   global.app = {
     dev: {
       id: 0,
