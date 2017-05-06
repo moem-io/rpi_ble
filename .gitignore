@@ -39,3 +39,5 @@ jspm_packages
 nd_venv/
 
 .idea/
+*.DS_Store
+.env
