@@ -4,8 +4,6 @@ var noble = require('noble');
 var query = require('../query');
 var cmdsBase = require('../cmds_base');
 
-var pBuild = require('../packet/build');
-
 var cmds = null;
 var cmdsCharHeader = null;
 var cmdsCharData = null;

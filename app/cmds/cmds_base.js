@@ -3,7 +3,7 @@ const HeaderUuid = '0000A00100000010800000AABBCCDDEE';
 const DataUuid = '0000A00200000010800000AABBCCDDEE';
 const ResultUuid = '0000A00300000010800000AABBCCDDEE';
 
-const scanTimeout = 5000;
+const scanTimeout = 10000;
 
 const PacketType = {
   SCAN_REQUEST: 1,
