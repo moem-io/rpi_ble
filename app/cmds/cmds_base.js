@@ -4,6 +4,7 @@ const DataUuid = '0000A00200000010800000AABBCCDDEE';
 const ResultUuid = '0000A00300000010800000AABBCCDDEE';
 
 const scanTimeout = 5000;
+const disconnectTimeout = 100;
 
 const PacketType = {
   SCAN_REQUEST: 1,
@@ -41,6 +42,7 @@ module.exports.DataUuid = DataUuid;
 module.exports.ResultUuid = ResultUuid;
 
 module.exports.scanTimeout = scanTimeout;
+module.exports.disconnectTimeout = disconnectTimeout;
 
 module.exports.PacketType = PacketType;
 module.exports.BuildType = BuildType;

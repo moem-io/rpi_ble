@@ -2,29 +2,28 @@ var util = require('util');
 var bleno = require('bleno');
 var cmdsBase = require('../cmds_base');
 
-function CmdsHeaderChar(that) {
-  this.cmds = that;
+function CmdsHeaderChar() {
   bleno.Characteristic.call(this, {
     uuid: cmdsBase.HeaderUuid,
-    properties: ['read', 'write']
+    properties: ['read', 'write', 'writeWithoutResponse']
   });
 }
 
-function CmdsDataChar(that) {
-  this.cmds = that;
+function CmdsDataChar() {
   bleno.Characteristic.call(this, {
     uuid: cmdsBase.DataUuid,
-    properties: ['read', 'write']
+    properties: ['read', 'write', 'writeWithoutResponse']
   });
 }
 
-function CmdsResultChar(that) {
-  this.cmds = that;
+function CmdsResultChar() {
   bleno.Characteristic.call(this, {
     uuid: cmdsBase.ResultUuid,
     properties: ['read', 'write', 'notify']
   });
 }
+
+var resUpdate = null;
 
 util.inherits(CmdsHeaderChar, bleno.Characteristic);
 util.inherits(CmdsDataChar, bleno.Characteristic);
@@ -38,43 +37,27 @@ function validateWrite(data, offset, callback, dataLength) {
 CmdsHeaderChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 7);
   bleno.log("Header Added");
-  app.rxP[app.rxP.totalCount] = {header: data};
-  //TODO : ERROR CHECK IF OBJECT IS NOT INITIALIZED.
+  app.rxP[app.rxP.totalCount] = {header: data, data: null};
   app.rxP.headerCount++;
 
-  var resultCode = new Buffer([cmdsBase.ResultType.HEADER]);
-
-  this.cmds.resultUpdateHandler(resultCode);
+  resultUpdate(cmdsBase.ResultType.HEADER);
   callback(this.RESULT_SUCCESS);
 };
 
 CmdsDataChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 20);
   bleno.log("Data Added");
-  app.rxP[app.rxP.totalCount] = {data: data};
+  app.rxP[app.rxP.totalCount].data = data;
   app.rxP.dataCount++;
 
   if (app.rxP.dataCount === app.rxP.headerCount) {
     app.rxP.totalCount++;
 
-
-    var resultCode = new Buffer([cmdsBase.ResultType.DATA]);
-    this.cmds.resultUpdateHandler(resultCode);
-
-    bleno.emit('interpretReady');
-
-    bleno.on('interpretDone', () => {
-      resultCode = new Buffer([cmdsBase.ResultType.INTERPRET]);
-      console.error("this Error?");
-      //TODO: this object?
-      this.cmds.resultUpdateHandler(resultCode);
-    });
-
+    resultUpdate(cmdsBase.ResultType.DATA);
     callback(this.RESULT_SUCCESS);
+    bleno.emit('interpretReady');
   } else {
-    resultCode = new Buffer([cmdsBase.ResultType.ERROR]);
-    this.cmds.resultUpdateHandler(resultCode);
-
+    resultUpdate(cmdsBase.ResultType.ERROR);
     //TODO: ERROR HANDLING.
     callback(this.RESULT_UNLIKELY_ERROR);
   }
@@ -82,10 +65,16 @@ CmdsDataChar.prototype.onWriteRequest = function (data, offset, withoutResponse,
 
 CmdsResultChar.prototype.onSubscribe = function (maxSize, updateValueCallback) {
   bleno.log("Subscribe Complete");
-  this.cmds.resultUpdateHandler = updateValueCallback;
-  var resultCode = new Buffer([cmdsBase.ResultType.IDLE]);
-  this.cmds.resultUpdateHandler(resultCode);
+  resUpdate = updateValueCallback;
+  resultUpdate(cmdsBase.ResultType.IDLE);
 };
+
+bleno.on('interpretResult', () => {
+  resultUpdate(cmdsBase.ResultType.INTERPRET);
+  setTimeout(() => bleno.disconnect(), cmdsBase.disconnectTimeout);
+});
+
+var resultUpdate = (resType) => resUpdate(Buffer.from([resType]));
 
 module.exports.Header = CmdsHeaderChar;
 module.exports.Data = CmdsDataChar;

@@ -1,6 +1,7 @@
 var cmdsBase = require('../../cmds_base');
 var pUtil = require('../../packet/util');
 var query = require('../../query');
+var bleno = require('bleno');
 
 function interpretPacket() {
   var header = pUtil.pHeader(app.rxP[app.rxP.processCount].header);
@@ -8,17 +9,19 @@ function interpretPacket() {
 
   switch (header.type) {
     case cmdsBase.BuildType.SCAN_RESPONSE:
-      if (!data.length) {
-        for (var i = 0; i < data.length; i++) {
-          var addr = data.toString('utf8', i, i + 5); //TODO: uppercase?
-          var rssi = -(data.readUInt8(i + 6));
-          app.net.nodeCount++;
+      var len = pUtil.aData(data, 7);
 
-          query.addNode(app.net.nodeCount, header.src, addr, rssi);
+      if (len) {
+        for (var i = 0; i < len; i++) {
+          var addr = pUtil.pData(data.toString('hex', i * 6, (i + 1) * 6), true, true);
+          var rssi = -(data.readUInt8((i * 6) + 6));
+          app.net.nodeCount++; //TODO: NODECOUNT Bug. Self Count (HUB)
+
+          query.addNode(app.net.nodeCount, header.src, addr, rssi); //TODO: Make it Promise.
         }
-      } else {
-        cmdsBase.log("End Node. None Found");
       }
+      else
+        cmdsBase.log("End Node. None Found");
       break;
 
     case cmdsBase.BuildType.SENSOR_STATE_ATTACH:

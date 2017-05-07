@@ -7,9 +7,9 @@ function CmdsService() {
   bleno.PrimaryService.call(this, {
     uuid: CmdsBase.BaseUuid,
     characteristics: [
-      new CmdsChar.Header(this),
-      new CmdsChar.Data(this),
-      new CmdsChar.Result(this)
+      new CmdsChar.Header(),
+      new CmdsChar.Data(),
+      new CmdsChar.Result()
     ]
   });
   this.resultUpdateHandler = null;

@@ -11,11 +11,6 @@ bleno.on('advertisingStartError', () => cmdsStartAdvertise());
 bleno.on('servicesSet', () => bleno.log('SVC set. Advertising'));
 bleno.on('servicesSetError', () => cmdsStartAdvertise());
 
-bleno.on('accept', () => {
-  bleno.stopAdvertising();
-  bleno.log("Central Connected, Stop Advertising.");
-});
-
 bleno.on('disconnect', () => {
   cmdsStartAdvertise();
   bleno.log('Central Disconnected. Re-advertising');

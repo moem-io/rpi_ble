@@ -18,6 +18,13 @@ var query = require('./query');
 var CmdsBle = function () {
   this.log = (str) => console.log("[APP] " + str);
   this.error = (str) => console.error("[APP] " + str);
+  this.cConn = () => {
+    var res = false;
+    Object.keys(noble._peripherals).forEach(
+      k => (res || noble._peripherals[k].state === 'connected') ? res = true : ''
+    );
+    return res;
+  };
   events.EventEmitter.call(this);
 };
 
@@ -109,23 +116,26 @@ var oncStandBy = function () {
   cmdsBle.log('Central Stop Scanning');
 };
 
-var onSendReady = function () {
-  cmdsBle.emit('cSend');
-};
+var onSendReady = () => cmdsBle.emit('cSend');
 
 var onSendDone = function () {
   (app.txP.totalCount > app.txP.processCount) ? noble.emit('sendReady') : cmdsBle.emit('pStandBy');
   //TODO : if more or wait for receive and send, fix this.
 };
 
-var onInterpretReady = function () {
+var onInterpretReady = () => {
+  cmdsBle.log('Start Interpreting');
   pInterpret.run();
 };
 
 var onInterpretDone = function () {
-  if (app.rxP.totalCount >= app.rxP.processCount) {
+  if (app.rxP.totalCount > app.rxP.processCount) {
+    cmdsBle.log('Additional Interpreting');
     bleno.emit('interpretReady');
-    cmdsBle.log('Start Interpreting');
+  }
+  else {
+    cmdsBle.log('Dispatching Interpret Result, Disconnecting.');
+    bleno.emit('interpretResult');
   }
 };
 
@@ -147,5 +157,12 @@ noble.on('sendDone', onSendDone);
 
 bleno.on('interpretReady', onInterpretReady);
 bleno.on('interpretDone', onInterpretDone);
+
+bleno.on('accept', () => {
+  if (!cmdsBle.cConn()) {
+    bleno.stopAdvertising();
+    bleno.log("Central Connected, Stop Advertising.");
+  }
+});
 
 cmdsBle.emit('init');

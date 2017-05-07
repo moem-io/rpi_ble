@@ -36,10 +36,9 @@ noble.on('scanStop', () => {
   }
 });
 
-noble.on('disconnect', () => noble.log("Peripheral Disconnected"));
-
 function cmdsConn(node) {
-  node.connect(() => {
+  node.once('disconnect', () => noble.log("Peripheral Disconnected"));
+  node.connect((err) => {
     node.discoverServices([cmdsBase.BaseUuid,cmdsBase.BaseUuid.toLowerCase()], (err, svcs) => {
       svcs.forEach((svc) => {
         if (svc.uuid.toUpperCase() === cmdsBase.BaseUuid) {

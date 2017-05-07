@@ -14,7 +14,8 @@ var addNode = function (nodeNo, parentNo, addr, rssi) {
     .then(p => retrieveNode({addr: addr, nodeNo: nodeNo, depth: p.get('depth') + 1})
       .spread(c => pBuild.run(cmdsBase.BuildType.SCAN_REQUEST, c.get('nodeNo'))
         .then(() => db.Networks.findOrCreate({
-          where: {parent: p.get('id'), child: c.get('id')}, defaults: {rssi: rssi}
+          where: {$or: [{parent: p.get('id'), child: c.get('id')}, {parent: c.get('id'), child: p.get('id')}]},
+          defaults: {rssi: rssi}
         }))
       ))
     .spread((net) => db.Networks.update({rssi: rssi}, {where: {id: net.get('id')}}));
