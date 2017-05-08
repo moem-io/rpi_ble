@@ -5,7 +5,7 @@ var CmdsChar = require('./cmds-char');
 
 function CmdsService() {
   bleno.PrimaryService.call(this, {
-    uuid: CmdsBase.BaseUuid,
+    uuid: CmdsBase.BaseUuid.toLowerCase(),
     characteristics: [
       new CmdsChar.Header(),
       new CmdsChar.Data(),

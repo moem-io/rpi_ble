@@ -4,21 +4,21 @@ var cmdsBase = require('../cmds_base');
 
 function CmdsHeaderChar() {
   bleno.Characteristic.call(this, {
-    uuid: cmdsBase.HeaderUuid,
+    uuid: cmdsBase.HeaderUuid.toLowerCase(),
     properties: ['read', 'write', 'writeWithoutResponse']
   });
 }
 
 function CmdsDataChar() {
   bleno.Characteristic.call(this, {
-    uuid: cmdsBase.DataUuid,
+    uuid: cmdsBase.DataUuid.toLowerCase(),
     properties: ['read', 'write', 'writeWithoutResponse']
   });
 }
 
 function CmdsResultChar() {
   bleno.Characteristic.call(this, {
-    uuid: cmdsBase.ResultUuid,
+    uuid: cmdsBase.ResultUuid.toLowerCase(),
     properties: ['read', 'write', 'notify']
   });
 }
