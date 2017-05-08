@@ -25,6 +25,7 @@ var CmdsBle = function () {
     );
     return res;
   };
+  this.pStandBy = false;
   events.EventEmitter.call(this);
 };
 
@@ -91,8 +92,7 @@ var onStandBy = function () {
 };
 
 var onPStandBy = function () {
-  cmdsP.startAdvertise();
-  cmdsBle.log('Peripheral Start Advertising');
+  cmdsBle.pStandBy = true;
 };
 
 var onCScan = function () {
@@ -139,6 +139,15 @@ var onInterpretDone = function () {
   }
 };
 
+var onAdvReady = function () {
+  if (cmdsBle.pStandBy) {
+    cmdsBle.pStandBy = false;
+    cmdsP.startAdvertise();
+    cmdsBle.log('Peripheral Start Advertising');
+  }
+};
+
+
 noble.log = (str) => console.log("[C] " + str);
 bleno.log = (str) => console.log("[P] " + str);
 
@@ -154,6 +163,8 @@ cmdsBle.on('cStandBy', oncStandBy);
 
 noble.on('sendReady', onSendReady);
 noble.on('sendDone', onSendDone);
+
+noble.on('advReady', onAdvReady);
 
 bleno.on('interpretReady', onInterpretReady);
 bleno.on('interpretDone', onInterpretDone);
