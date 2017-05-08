@@ -28,6 +28,7 @@ plan.remote('install', function (remote) {
   remote.log('Re-Initializing Repo');
   remote.sudo('rm -rf ' + repo);
   remote.with('git clone ' + repoAddr + ' ' + repo, () => checkout(remote, 'master'));
+  remote.with('cd ' + repo, () => remote.sudo('./build.sh'));
 
   npm_init(remote);
 });
