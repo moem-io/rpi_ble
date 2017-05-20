@@ -4,9 +4,10 @@ var noble = require('noble');
 var query = require('../query');
 var cmdsBase = require('../cmds_base');
 
-var cmds = null;
+var target = null;
 var cmdsCharHeader = null;
-var cmdsCharData = null;
+var cmdsCharData1 = null;
+var cmdsCharData2 = null;
 var cmdsCharResult = null;
 
 function cmdsStartScan() {
@@ -14,7 +15,7 @@ function cmdsStartScan() {
   setTimeout(() => noble.stopScanning(), cmdsBase.scanTimeout);
 }
 
-noble.on('discover', node => noble.log('found node:' + node.advertisement.localName));
+noble.on('discover', node => noble.log('found node:' + node.advertisement.localName + " RSSI : " + node.rssi));
 
 noble.on('scanStop', () => {
   noble.log("Scan Stopped");
@@ -41,19 +42,22 @@ function cmdsConn(node) {
     noble.log("Peripheral Disconnected");
     noble.emit('advReady');
   });
+  target = node;
   node.connect((err) => {
-    node.discoverServices([cmdsBase.BaseUuid,cmdsBase.BaseUuid.toLowerCase()], (err, svcs) => {
+    noble.log("Connecting to "+node.address);
+    node.discoverServices([cmdsBase.BaseUuid, cmdsBase.BaseUuid.toLowerCase()], (err, svcs) => {
       svcs.forEach((svc) => {
         if (svc.uuid.toUpperCase() === cmdsBase.BaseUuid) {
           svc.discoverCharacteristics([], (err, chars) => {
             chars.forEach((char) => {
               var uuid = char.uuid.toUpperCase();
               cmdsBase.HeaderUuid === uuid ? cmdsCharHeader = char :
-                cmdsBase.DataUuid === uuid ? cmdsCharData = char :
-                  cmdsBase.ResultUuid === uuid ? cmdsCharResult = char : '';
+                cmdsBase.Data1Uuid === uuid ? cmdsCharData1 = char :
+                  cmdsBase.Data2Uuid === uuid ? cmdsCharData2 = char :
+                    cmdsBase.ResultUuid === uuid ? cmdsCharResult = char : '';
             });
 
-            if (cmdsCharHeader && cmdsCharData && cmdsCharResult) {
+            if (cmdsCharHeader && cmdsCharData1 && cmdsCharData2 && cmdsCharResult) {
               noble.log('Found Service, Characteristic');
               cmdsCharResult.on('data', (data, isNoti) => resultEmitter(data.readUInt8(0)));
               cmdsCharResult.subscribe(() => noble.log("Notification Enabled!"));
@@ -76,14 +80,22 @@ function resultEmitter(resultCode) {
       break;
     case cmdsBase.ResultType.HEADER:
       noble.log("Status : HEADER");
-      sendData();
+      sendData1();
       break;
-    case cmdsBase.ResultType.DATA:
-      noble.log("Status : DATA");
+    case cmdsBase.ResultType.DATA1:
+      noble.log("Status : DATA 1");
+      sendData2();
+      break;
+    case cmdsBase.ResultType.DATA2:
+      noble.log("Status : DATA 2");
       break;
     case cmdsBase.ResultType.INTERPRET:
       noble.log("Status : INTERPRET");
       app.txP.processCount++;
+      target.disconnect(() => {
+        noble.log("Target Disconnected");
+        target = null;
+      });
       noble.emit('sendDone');
       break;
     case cmdsBase.ResultType.INTERPRET_ERROR:
@@ -101,17 +113,20 @@ function resultEmitter(resultCode) {
 
 function sendHeader() {
   var header = app.txP[app.txP.processCount].header;
-  cmdsCharHeader.write(header, false, (err) =>
-    (!err) ? noble.log("Header Send Complete") : noble.log(err)
-  );
+  cmdsCharHeader.write(header, false, err => sendLog(err, "Header"));
 }
 
-function sendData() {
+function sendData1() {
   var data = app.txP[app.txP.processCount].data;
-  cmdsCharData.write(data, false, (err) => {
-    (!err) ? noble.log("Data Send Complete") : noble.log(err);
-  });
+  cmdsCharData1.write(data.slice(0, 20), false, err => sendLog(err, "Data 1"));
 }
+
+function sendData2() {
+  var data = app.txP[app.txP.processCount].data;
+  (data.length > 20) ? cmdsCharData2.write(data.slice(20, 40), false, err => sendLog(err, "Data 2")) : '';
+}
+
+var sendLog = (err, msg) => (!err) ? noble.log(msg + " Send Complete") : noble.log(err);
 
 module.exports.startScan = cmdsStartScan;
 module.exports.cmdsConn = cmdsConn;

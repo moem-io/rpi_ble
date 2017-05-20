@@ -9,6 +9,7 @@ var addHub = function (addr) {
 
 var addNode = function (nodeNo, parentNo, addr, rssi) {
   addr = addr.replace(/:/g, ''); //TODO: Duplicate ?
+  console.log("Found Node : "+addr+" nodeNo : "+nodeNo);
 
   return getNode({nodeNo: parentNo})
     .then(p => retrieveNode({addr: addr, nodeNo: nodeNo, depth: p.get('depth') + 1})
@@ -19,14 +20,6 @@ var addNode = function (nodeNo, parentNo, addr, rssi) {
         }))
       ))
     .spread((net) => db.Networks.update({rssi: rssi}, {where: {id: net.get('id')}}));
-
-  // return db.Nodes.findOrCreate({where: {addr: addr}, defaults: {nodeNo: nodeNo}})
-  //   .spread((c) => db.Nodes.find({where: {nodeNo: parentNo}})
-  //     .then((p) => db.Networks.findOrCreate({
-  //       where: {parent: p.get('id'), child: c.get('id')}, defaults: {rssi: rssi}
-  //     })))
-  //   .spread((net) => db.Networks.update({rssi: rssi}, {where: {id: net.get('id')}}))
-  //   .spread(() => pBuild.run(cmdsBase.BuildType.SCAN_REQUEST, nodeNo));
 };
 
 var getNode = function (opt) {

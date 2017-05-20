@@ -134,7 +134,7 @@ var onInterpretDone = function () {
     bleno.emit('interpretReady');
   }
   else {
-    cmdsBle.log('Dispatching Interpret Result, Disconnecting.');
+    cmdsBle.log('Dispatching Interpret Result. Waiting for Disconnection.');
     bleno.emit('interpretResult');
   }
 };
@@ -170,6 +170,7 @@ bleno.on('interpretReady', onInterpretReady);
 bleno.on('interpretDone', onInterpretDone);
 
 bleno.on('accept', () => {
+  console.log("-------Hi I'm Accept!-------");
   if (!cmdsBle.cConn()) {
     bleno.stopAdvertising();
     bleno.log("Central Connected, Stop Advertising.");

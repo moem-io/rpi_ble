@@ -1,7 +1,8 @@
 const BaseUuid = '00009000000000108000001122334455';
 const HeaderUuid = '00009001000000108000001122334455';
-const DataUuid = '00009002000000108000001122334455';
-const ResultUuid = '00009003000000108000001122334455';
+const Data1Uuid = '00009002000000108000001122334455';
+const Data2Uuid = '00009003000000108000001122334455';
+const ResultUuid = '00009004000000108000001122334455';
 
 const scanTimeout = 5000;
 const disconnectTimeout = 100;
@@ -30,15 +31,17 @@ const BuildType = {
 const ResultType = {
   IDLE: 0,
   HEADER: 1,
-  DATA: 2,
-  INTERPRET: 3,
-  INTERPRET_ERROR: 4,
+  DATA1: 2,
+  DATA2: 3,
+  INTERPRET: 4,
+  INTERPRET_ERROR: 5,
   ERROR: 255
 };
 
 module.exports.BaseUuid = BaseUuid;
 module.exports.HeaderUuid = HeaderUuid;
-module.exports.DataUuid = DataUuid;
+module.exports.Data1Uuid = Data1Uuid;
+module.exports.Data2Uuid = Data2Uuid;
 module.exports.ResultUuid = ResultUuid;
 
 module.exports.scanTimeout = scanTimeout;
