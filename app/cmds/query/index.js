@@ -9,7 +9,7 @@ var addHub = function (addr) {
 
 var addNode = function (nodeNo, parentNo, addr, rssi) {
   addr = addr.replace(/:/g, ''); //TODO: Duplicate ?
-  console.log("Found Node : "+addr+" nodeNo : "+nodeNo);
+  cmds.log("Found Node : " + addr + " nodeNo : " + nodeNo);
 
   return getNode({nodeNo: parentNo})
     .then(p => retrieveNode({addr: addr, nodeNo: nodeNo, depth: p.get('depth') + 1})

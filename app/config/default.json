@@ -1,0 +1,23 @@
+{
+  "dev": {
+    "id": 0,
+    "depth": 0,
+    "addr": "acbc32a23ab0",
+    "dbId": null
+  },
+  "net": {
+    "nodeCnt": 0,
+    "disc": {}
+  },
+  "rxP": {
+    "headerCnt": 0,
+    "dataCnt": 0,
+    "totalCnt": 0,
+    "procCnt": 0
+  },
+  "txP": {
+    "totalCnt": 0,
+    "procCnt": 0
+  },
+  "a": "hi"
+}

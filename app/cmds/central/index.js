@@ -11,11 +11,17 @@ var cmdsCharData2 = null;
 var cmdsCharResult = null;
 
 function cmdsStartScan() {
-  noble.startScanning([cmdsBase.BaseUuid.toLowerCase()]);
+  noble.startScanning([cmdsBase.BaseUuid], true);
   setTimeout(() => noble.stopScanning(), cmdsBase.scanTimeout);
 }
 
-noble.on('discover', node => noble.log('found node:' + node.advertisement.localName + " RSSI : " + node.rssi));
+noble.on('discover', node => {
+
+  (!node.rssiBase) ? node.rssiBase = node.rssi : node.rssiBase += node.rssi;
+  (!node.rssiCnt) ? node.rssiCnt = 1 : node.rssiCnt += 1;
+  noble.log('rssi:' + node.rssi + ' cnt:' + node.rssiCnt + ' base:' + node.rssiBase);
+  noble.log('found node:' + node.advertisement.localName + " RSSI:" + Math.round(node.rssiBase / node.rssiCnt));
+});
 
 noble.on('scanStop', () => {
   noble.log("Scan Stopped");
@@ -26,11 +32,11 @@ noble.on('scanStop', () => {
       var node = noble._peripherals[uuid];
       var nodeAddr = node.address.replace(/:/g, '');
 
-      app.net.nodeCount++;
+      app.net.nodeCnt++;
       app.net.disc[nodeAddr] = node;
 
-      return query.addNode(app.net.nodeCount, app.dev.id, nodeAddr, node.rssi)
-    })).then(() => noble.emit('sendReady'));
+      return query.addNode(app.net.nodeCnt, app.dev.id, nodeAddr, Math.round(node.rssiBase / node.rssiCnt))
+    })).then(() => cmds.emit('cSend'));
   } else {
     noble.log("[Warning] : None Found. Restart Scanning.");
     cmdsStartScan();
@@ -40,11 +46,11 @@ noble.on('scanStop', () => {
 function cmdsConn(node) {
   node.once('disconnect', () => {
     noble.log("Peripheral Disconnected");
-    noble.emit('advReady');
+    cmds.emit('pStandBy');
   });
   target = node;
   node.connect((err) => {
-    noble.log("Connecting to "+node.address);
+    noble.log("Connecting to " + node.address);
     node.discoverServices([cmdsBase.BaseUuid, cmdsBase.BaseUuid.toLowerCase()], (err, svcs) => {
       svcs.forEach((svc) => {
         if (svc.uuid.toUpperCase() === cmdsBase.BaseUuid) {
@@ -91,12 +97,12 @@ function resultEmitter(resultCode) {
       break;
     case cmdsBase.ResultType.INTERPRET:
       noble.log("Status : INTERPRET");
-      app.txP.processCount++;
+      app.txP.procCnt++;
       target.disconnect(() => {
         noble.log("Target Disconnected");
         target = null;
       });
-      noble.emit('sendDone');
+      cmds.emit('cSendDone');
       break;
     case cmdsBase.ResultType.INTERPRET_ERROR:
       noble.log("Status : INTERPRET_ERROR");
@@ -112,17 +118,17 @@ function resultEmitter(resultCode) {
 }
 
 function sendHeader() {
-  var header = app.txP[app.txP.processCount].header;
+  var header = app.txP[app.txP.procCnt].header;
   cmdsCharHeader.write(header, false, err => sendLog(err, "Header"));
 }
 
 function sendData1() {
-  var data = app.txP[app.txP.processCount].data;
+  var data = app.txP[app.txP.procCnt].data;
   cmdsCharData1.write(data.slice(0, 20), false, err => sendLog(err, "Data 1"));
 }
 
 function sendData2() {
-  var data = app.txP[app.txP.processCount].data;
+  var data = app.txP[app.txP.procCnt].data;
   (data.length > 20) ? cmdsCharData2.write(data.slice(20, 40), false, err => sendLog(err, "Data 2")) : '';
 }
 

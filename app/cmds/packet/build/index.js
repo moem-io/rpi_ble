@@ -32,8 +32,8 @@ function buildPacket(type, target) {
 
   return Promise.all([header, data]).then((res) => {
       var packet = {header: res[0], data: res[1]};
-      app.txP[app.txP.totalCount] = packet;
-      app.txP.totalCount++;
+    app.txP[app.txP.totalCnt] = packet;
+    app.txP.totalCnt++;
 
       return true;
     }

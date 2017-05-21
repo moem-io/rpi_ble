@@ -6,15 +6,21 @@ var name = 'MxHUB';
 var cmdsService = new CmdsService();
 
 bleno.on('advertisingStart', (err) => {
-  bleno.log('on -> advertisingStart: ' + (err ? err : 'success'));
+  bleno.log('advertisingStart: ' + (err ? err : 'success'));
   (!err) ? bleno.setServices([cmdsService], (e) => bleno.log('setServices: ' + (e ? e : 'success')))  : '';
 });
 
 bleno.on('disconnect', () => {
-  cmdsStartAdvertise();
+  cmds.emit('pStandBy');
   bleno.log('Central Disconnected. Re-advertising');
 });
 
+bleno.on('accept', () => {
+  if (!cmds.cConn()) {
+    bleno.stopAdvertising();
+    bleno.log("Central Connected, Stop Advertising.");
+  }
+});
 
 function cmdsStartAdvertise() {
   bleno.startAdvertising(name, [cmdsService.uuid]);

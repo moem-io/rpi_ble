@@ -46,8 +46,8 @@ function validateWrite(data, offset, callback, dataLength) {
 CmdsHeaderChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 7);
   bleno.log("Header Added");
-  app.rxP[app.rxP.totalCount] = {header: data, data: null};
-  app.rxP.headerCount++;
+  app.rxP[app.rxP.totalCnt] = {header: data, data: null};
+  app.rxP.headerCnt++;
 
   resultUpdate(cmdsBase.ResultType.HEADER);
 };
@@ -55,8 +55,8 @@ CmdsHeaderChar.prototype.onWriteRequest = function (data, offset, withoutRespons
 CmdsData1Char.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 20);
   bleno.log("Data1 Added");
-  app.rxP[app.rxP.totalCount].data = data;
-  bleno.log("Data 1 : " + pUtil.pData(app.rxP[app.rxP.totalCount].data, 0, true));
+  app.rxP[app.rxP.totalCnt].data = data;
+  bleno.log("Data 1 : " + pUtil.pData(app.rxP[app.rxP.totalCnt].data, 0, true));
   resultUpdate(cmdsBase.ResultType.DATA1, callback);
   dataCount(1);
 };
@@ -64,8 +64,8 @@ CmdsData1Char.prototype.onWriteRequest = function (data, offset, withoutResponse
 CmdsData2Char.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 20);
   bleno.log("Data2 Added");
-  app.rxP[app.rxP.totalCount].data = app.rxP[app.rxP.totalCount].data + data;
-  bleno.log("Data 2 : "+app.rxP[app.rxP.totalCount].data);
+  app.rxP[app.rxP.totalCnt].data = app.rxP[app.rxP.totalCnt].data + data;
+  bleno.log("Data 2 : " + app.rxP[app.rxP.totalCnt].data);
   resultUpdate(cmdsBase.ResultType.DATA2, callback);
   dataCount(2);
 };
@@ -79,14 +79,14 @@ CmdsResultChar.prototype.onSubscribe = function (maxSize, updateValueCallback) {
 bleno.on('interpretResult', () => resultUpdate(cmdsBase.ResultType.INTERPRET));
 
 var dataCount = (cnt) => {
-  var header = pUtil.pHeader(app.rxP[app.rxP.processCount].header);
+  var header = pUtil.pHeader(app.rxP[app.rxP.procCnt].header);
   (header.idxTot === cnt) ? interpretEmit() : '';
 };
 
 var interpretEmit = () => {
-  app.rxP.dataCount++;
-  app.rxP.totalCount++;
-  bleno.emit('interpretReady');
+  app.rxP.dataCnt++;
+  app.rxP.totalCnt++;
+  cmds.emit('interpretReady');
 };
 
 var resultUpdate = (resType, callback) => {

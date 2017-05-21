@@ -4,8 +4,8 @@ var query = require('../../query');
 var bleno = require('bleno');
 
 function interpretPacket() {
-  var header = pUtil.pHeader(app.rxP[app.rxP.processCount].header);
-  var data = app.rxP[app.rxP.processCount].data;
+  var header = pUtil.pHeader(app.rxP[app.rxP.procCnt].header);
+  var data = app.rxP[app.rxP.procCnt].data;
 
   switch (header.type) {
     case cmdsBase.BuildType.SCAN_RESPONSE:
@@ -15,9 +15,9 @@ function interpretPacket() {
         for (var i = 0; i < len; i++) {
           var addr = pUtil.pData(data.toString('hex', i * 6, (i + 1) * 6), true, true);
           var rssi = -(data.readUInt8((i * 6) + 6));
-          app.net.nodeCount++; //TODO: NODECOUNT Bug. Self Count (HUB)
+          app.net.nodeCnt++; //TODO: nodeCnt Bug. Self Count (HUB)
 
-          query.addNode(app.net.nodeCount, header.src, addr, rssi); //TODO: Make it Promise.
+          query.addNode(app.net.nodeCnt, header.src, addr, rssi); //TODO: Make it Promise.
         }
       }
       else
@@ -38,8 +38,8 @@ function interpretPacket() {
       break;
   }
 
-  app.rxP.processCount++;
-  bleno.emit('interpretDone');
+  app.rxP.procCnt++;
+  cmds.emit('interpretDone');
 }
 
 module.exports.run = interpretPacket;
