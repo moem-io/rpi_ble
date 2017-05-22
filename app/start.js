@@ -1,12 +1,21 @@
-global.cfg = require('jsonfile');
-global.cfgFile = './config/default.json';
+var fs;
+try {
+  fs = require('graceful-fs');
+} catch (_) {
+  fs = require('fs');
+}
 
+var cfgFile = './config/default.json';
+var cJSON = require('circular-json');
+
+global.cfgUpdate = function () {
+  fs.writeFile(cfgFile, cJSON.stringify(app));
+};
 
 global.app = require('config');
-(app.has('dev.addr')) ? console.log("Device Set!") : console.log("First Time Set!");
+(app.has('dev.addr')) ? console.log("Start Device!") : console.log("Init Device!");
 
-app.a = 'hi';
-cfg.writeFile(cfgFile, app, (e) => console.log(e));
+cfgUpdate();
 
 var cmds = require('./cmds');
 

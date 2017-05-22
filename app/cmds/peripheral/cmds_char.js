@@ -64,7 +64,8 @@ CmdsData1Char.prototype.onWriteRequest = function (data, offset, withoutResponse
 CmdsData2Char.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 20);
   bleno.log("Data2 Added");
-  app.rxP[app.rxP.totalCnt].data = app.rxP[app.rxP.totalCnt].data + data;
+  var tmp = app.rxP[app.rxP.totalCnt].data;
+  app.rxP[app.rxP.totalCnt].data = tmp + data;
   bleno.log("Data 2 : " + app.rxP[app.rxP.totalCnt].data);
   resultUpdate(cmdsBase.ResultType.DATA2, callback);
   dataCount(2);

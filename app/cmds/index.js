@@ -74,20 +74,23 @@ var devPreset = function () {
     }
   };
 
-  cfg.writeFile(cfgFile, app, (e) => e ? console.log(e) : '');
+  cfgUpdate(); //State Sync
   return query.addHub(addr);
-}
+};
 
 // After Init, Sequence Choose
 var onStandBy = function () {
   db.sql.sync().then(() => (!app.has('dev.addr')) ? devPreset() : '')
     .then(() => {
-      if (!app.dev.nodeCnt)
+      if (!app.net.nodeCnt) {
+        cmds.log("Network Not Constructed!");
         this.emit('cScan');
-      else if (app.txP.totalCnt > app.txP.procCnt) // Maybe Unusual Failure.
+      } else if (app.txP.totalCnt > app.txP.procCnt) // Maybe Unusual Failure.
         this.emit('cSendPacket');
-      else
+      else {
+        cmds.log("Network Constructed. Waiting for Accept!");
         this.emit('pStandBy');
+      }
     });
 };
 
@@ -110,7 +113,7 @@ var onCSend = function () {
 
 var onCSendDone = function () {
   (app.txP.totalCnt > app.txP.procCnt) ? cmds.emit('cSend') : cmds.emit('pStandBy');
-  cfg.writeFile(cfgFile, app, (e) => e ? console.log(e) : ''); //State Sync.
+  cfgUpdate(); //State Sync
 };
 
 var onInterpretReady = function () {
@@ -132,7 +135,7 @@ var onInterpretDone = function () {
 var onPStandBy = function () {
   per.startAdvertise();
   cmds.log('Peripheral Start Advertising');
-  cfg.writeFile(cfgFile, app, (e) => e ? console.log(e) : ''); //State Sync.
+  cfgUpdate(); //State Sync
 };
 
 cmds.on('init', onInit);
