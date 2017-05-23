@@ -3,6 +3,8 @@
 var util = require('util');
 var events = require('events');
 var db = require("../models");
+var env = process.env.NODE_ENV || "development";
+var jsnx = require('jsnetworkx');
 
 var noble = require('noble');
 var bleno = require('bleno');
@@ -33,22 +35,8 @@ var CmdsBle = function () {
 util.inherits(CmdsBle, events.EventEmitter);
 global.cmds = new CmdsBle();
 
-var onInit = function () {
-  cmds.log("on Init Mode");
-  setTimeout(() => {
-    db.sql.sync().then(() => {
-      if (noble.state === 'poweredOn' && bleno.state === 'poweredOn') {
-        cmds.log("Ready State");
-        this.emit('standBy');
-      } else {
-        cmds.error("Error Ready State");
-        this.emit('init');
-      }
-    });
-  }, 100);
-};
-
 var devPreset = function () {
+  (env === "development") ? cmds.log("Develop ENV : Re-setting") : '';
   var addr = noble.address.replace(/:/g, '');
   cmds.log("My ADDR : " + addr);
   global.app = {
@@ -59,6 +47,8 @@ var devPreset = function () {
       dbId: null
     },
     net: {
+      set: false,
+      responseCnt: 0,
       nodeCnt: 0,
       disc: {}
     },
@@ -78,20 +68,58 @@ var devPreset = function () {
   return query.addHub(addr);
 };
 
-// After Init, Sequence Choose
+var onInit = function () {
+  cmds.log("on Init Mode");
+  setTimeout(() => {
+    if (noble.state === 'poweredOn' && bleno.state === 'poweredOn') {
+      db.sql.sync()
+        .then(() => (env === "development" || !app.has('dev.addr')) ? devPreset() : '')
+        .then(() => cmds.emit('standBy'));
+    } else {
+      cmds.error("Error Ready State");
+      this.emit('init');
+    }
+  }, 500);
+};
+
+// Sequence Choose
 var onStandBy = function () {
-  db.sql.sync().then(() => (!app.has('dev.addr')) ? devPreset() : '')
-    .then(() => {
-      if (!app.net.nodeCnt) {
-        cmds.log("Network Not Constructed!");
-        this.emit('cScan');
-      } else if (app.txP.totalCnt > app.txP.procCnt) // Maybe Unusual Failure.
-        this.emit('cSendPacket');
-      else {
-        cmds.log("Network Constructed. Waiting for Accept!");
-        this.emit('pStandBy');
-      }
-    });
+  cmds.log("standBy Mode.");
+
+  if (!app.net.nodeCnt) {
+    cmds.log("Network Not Constructed!");
+    this.emit('cScan');
+  } else if (app.txP.totalCnt > app.txP.procCnt) {
+    cmds.log("Packet Send.");
+    this.emit('cSend');
+  } else if (app.net.set === false && app.net.responseCnt === app.net.nodeCnt) {
+    netSet();
+  } else {
+    cmds.log("Network : " + app.net.set + " Waiting for Accept!");
+    this.emit('pStandBy');
+  }
+};
+
+var netSet = function () {
+  cmds.log("Network Scanning out of : " + app.net.responseCnt + "/" + app.net.nodeCnt);
+  var G = new jsnx.Graph();
+  query.getAllNetwork().then(net => net.forEach(
+    conn => {
+      G.addEdge(conn.parent, conn.child, {weight: conn.rssi});
+      cmds.log(conn.parent + " -> " + conn.child + " RSSI : " + conn.rssi);
+    }
+  )).then(() => {
+    for (var i = 1; i <= app.net.nodeCnt; i++) {
+      var res = jsnx.bidirectionalShortestPath(G, 0, i, {weight: 'weight'});
+      res.shift();
+      res.pop();
+      res = res.join('-');
+      query.addPath(i, res);
+    }
+  }).then(() => {
+    app.net.set = true;
+    cmds.emit('standBy');
+  });
 };
 
 var onCScan = function () {
@@ -99,10 +127,11 @@ var onCScan = function () {
   cmds.log('Central Start scanning network');
 };
 
-//TODO: REJECT ERROR.
 var findRoute = function (target) {
   return query.getNode({nodeNo: target})
-    .then(node => (node.get('addr') in app.net.disc) ? app.net.disc[node.get('addr')] : reject("Not Found"))
+    .then(node => (node.get('addr') in app.net.disc) ? app.net.disc[node.get('addr')] : () => {
+      throw new Error("Not Found!") //May not work with Async Calls.
+    });
 };
 
 var onCSend = function () {
@@ -112,30 +141,23 @@ var onCSend = function () {
 };
 
 var onCSendDone = function () {
-  (app.txP.totalCnt > app.txP.procCnt) ? cmds.emit('cSend') : cmds.emit('pStandBy');
   cfgUpdate(); //State Sync
-};
-
-var onInterpretReady = function () {
-  cmds.log('Start Interpreting');
-  pInterpret.run();
-};
-
-var onInterpretDone = function () {
-  if (app.rxP.totalCnt > app.rxP.procCnt) {
-    cmds.log('Additional Interpreting');
-    cmds.emit('interpretReady');
-  }
-  else {
-    cmds.log('Dispatching Interpret Result. Waiting for Disconnection.');
-    bleno.emit('interpretResult');
-  }
+  cmds.emit('standBy');
 };
 
 var onPStandBy = function () {
   per.startAdvertise();
   cmds.log('Peripheral Start Advertising');
+};
+
+var onInterpret = function () {
+  cmds.log('Start Interpreting');
+  pInterpret.run();
+};
+
+var onInterpretDone = function () {
   cfgUpdate(); //State Sync
+  cmds.emit('standBy');
 };
 
 cmds.on('init', onInit);
@@ -147,7 +169,7 @@ cmds.on('cSendDone', onCSendDone);
 
 cmds.on('pStandBy', onPStandBy);
 
-cmds.on('interpretReady', onInterpretReady);
+cmds.on('interpret', onInterpret);
 cmds.on('interpretDone', onInterpretDone);
 
 cmds.emit('init');

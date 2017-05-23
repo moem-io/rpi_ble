@@ -3,6 +3,11 @@ var pUtil = require('../../packet/util');
 var cmdsBase = require("../../cmds_base");
 
 function buildPacket(type, target) {
+  if (target === app.dev.id) {
+    var skip = cmds.log("Self Packet. Skipping");
+    return Promise.all([skip]);
+  }
+
   switch (type) {
     case cmdsBase.BuildType.SCAN_REQUEST:
       var header = Promise.resolve(

@@ -44,10 +44,6 @@ noble.on('scanStop', () => {
 });
 
 function cmdsConn(node) {
-  node.once('disconnect', () => {
-    noble.log("Peripheral Disconnected");
-    cmds.emit('pStandBy');
-  });
   target = node;
   node.connect((err) => {
     noble.log("Connecting to " + node.address);
@@ -101,8 +97,8 @@ function resultEmitter(resultCode) {
       target.disconnect(() => {
         noble.log("Target Disconnected");
         target = null;
+        cmds.emit('cSendDone');
       });
-      cmds.emit('cSendDone');
       break;
     case cmdsBase.ResultType.INTERPRET_ERROR:
       noble.log("Status : INTERPRET_ERROR");

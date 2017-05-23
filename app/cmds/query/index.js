@@ -8,18 +8,15 @@ var addHub = function (addr) {
 };
 
 var addNode = function (nodeNo, parentNo, addr, rssi) {
-  addr = addr.replace(/:/g, ''); //TODO: Duplicate ?
+  addr = addr.replace(/:/g, ''); //TODO: Maybe Duplicate ?
   cmds.log("Found Node : " + addr + " nodeNo : " + nodeNo);
 
   return getNode({nodeNo: parentNo})
     .then(p => retrieveNode({addr: addr, nodeNo: nodeNo, depth: p.get('depth') + 1})
       .spread(c => pBuild.run(cmdsBase.BuildType.SCAN_REQUEST, c.get('nodeNo'))
-        .then(() => db.Networks.findOrCreate({
-          where: {$or: [{parent: p.get('id'), child: c.get('id')}, {parent: c.get('id'), child: p.get('id')}]},
-          defaults: {rssi: rssi, parent: p.get('id'), child: c.get('id')}
-        }))
-      ))
-    .spread((net) => db.Networks.update({rssi: rssi}, {where: {id: net.get('id')}}));
+        .then(() => retrieveNetwork({parent: p.get('id'), child: c.get('id'), rssi: rssi})
+        )))
+    .spread((net) => updateNetwork({rssi: rssi, net: net.get('id')}));
 };
 
 var getNode = function (opt) {
@@ -27,7 +24,30 @@ var getNode = function (opt) {
 };
 
 var retrieveNode = function (opt) {
-  return db.Nodes.findOrCreate({where: {addr: opt.addr}, defaults: {nodeNo: opt.nodeNo, depth: opt.depth}})
+  return db.Nodes.findOrCreate({where: {addr: opt.addr}, defaults: {nodeNo: opt.nodeNo, depth: opt.depth}});
+};
+
+var getAllNetwork = function () {
+  return db.Networks.findAll();
+};
+
+var retrieveNetwork = function (opt) {
+  return db.Networks.findOrCreate({
+    where: {$or: [{parent: opt.parent, child: opt.child}, {parent: opt.child, child: opt.parent}]},
+    defaults: {rssi: opt.rssi, parent: opt.parent, child: opt.child}
+  })
+};
+
+var updateNetwork = function (opt) {
+  return db.Networks.update({rssi: opt.rssi}, {where: {id: opt.net}});
+};
+
+var addPath = function (nodeNo, path) {
+  return getNode({nodeNo: nodeNo}).then((node) => retrievePath({target: node.get('id'), path: path}));
+};
+
+var retrievePath = function (opt) {
+  return db.Paths.findOrCreate({where: {target: opt.target}, defaults: {path: opt.path}});
 };
 
 module.exports.addHub = addHub;
@@ -35,3 +55,10 @@ module.exports.addNode = addNode;
 
 module.exports.getNode = getNode;
 module.exports.retrieveNode = retrieveNode;
+
+module.exports.getAllNetwork = getAllNetwork;
+module.exports.retrieveNetwork = retrieveNetwork;
+module.exports.updateNetwork = updateNetwork;
+
+module.exports.addPath = addPath;
+module.exports.retrievePath = retrievePath;
