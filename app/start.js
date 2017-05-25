@@ -15,6 +15,8 @@ global.cfgUpdate = function () {
 global.app = require('config');
 (app.has('dev.addr')) ? console.log("Start Device!") : console.log("Init Device!");
 
+global.Sql = null;
+
 cfgUpdate();
 
 var cmds = require('./cmds');

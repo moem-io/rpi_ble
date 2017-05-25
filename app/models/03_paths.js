@@ -9,7 +9,6 @@ module.exports = function (sql, SQL) {
     },
     target: {
       type: SQL.INTEGER.UNSIGNED,
-      references: {model: sql.models.Nodes, key: "id"},
       allowNull: false,
       unique: true
     },
