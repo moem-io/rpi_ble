@@ -103,10 +103,12 @@ var onStandBy = function () {
 var netSet = function () {
   cmds.log("Network Scanning out of : " + app.net.responseCnt + "/" + app.net.nodeCnt);
   var G = new jsnx.Graph();
+  var proc = [];
+
   query.getAllNetwork().then(net => net.forEach(
     conn => {
-      G.addEdge(conn.parent, conn.child, {weight: conn.rssi});
-      cmds.log(conn.parent + " -> " + conn.child + " RSSI : " + conn.rssi);
+      G.addEdge(conn.Parent.nodeNo, conn.Child.nodeNo, {weight: conn.rssi});
+      cmds.log(conn.Parent.nodeNo + " -> " + conn.Child.nodeNo + " RSSI : " + conn.rssi);
     }
   )).then(() => {
     for (var i = 1; i <= app.net.nodeCnt; i++) {
@@ -114,10 +116,12 @@ var netSet = function () {
       res.shift();
       res.pop();
       res = res.join('-');
-      query.addPath(i, res);
+      proc.push(query.addPath(i, res));
     }
+    return Promise.all(proc);
   }).then(() => {
     app.net.set = true;
+    cmds.log("Network All Set!");
     cmds.emit('standBy');
   });
 };
