@@ -35,7 +35,9 @@ var parseData = function (data, rev = false, str = false) {
   var bufIdx = 0;
 
   if (str) {
-    var tmp = data.toString('hex');
+    var tmpBuf = new Buffer(data);
+    var tmp = tmpBuf.toString('hex');
+
     return (!rev) ? tmp : tmp.match(/.{2}/g).reverse().join('');
   }
   else {
@@ -52,7 +54,7 @@ var analyzeData = function (data, len) {
   var i = 0;
 
   for (i; i < dataLen; i++) {
-    var tmp1 = data.slice(i * len, (i + 1) * len);
+    var tmp1 = Buffer.from(data.slice(i * len, (i + 1) * len));
     var tmp2 = Buffer.alloc(len);
     if (!Buffer.compare(tmp1, tmp2))
       break;
