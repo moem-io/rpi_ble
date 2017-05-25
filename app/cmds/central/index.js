@@ -16,11 +16,10 @@ function cmdsStartScan() {
 }
 
 noble.on('discover', node => {
-
-  (!node.rssiBase) ? node.rssiBase = node.rssi : node.rssiBase += node.rssi;
+  var rssi = -Math.abs(node.rssi);
+  (!node.rssiBase) ? node.rssiBase = rssi : node.rssiBase += rssi;
   (!node.rssiCnt) ? node.rssiCnt = 1 : node.rssiCnt += 1;
-  noble.log('rssi:' + node.rssi + ' cnt:' + node.rssiCnt + ' base:' + node.rssiBase);
-  noble.log('found node:' + node.advertisement.localName + " RSSI:" + Math.round(node.rssiBase / node.rssiCnt));
+  noble.log(node.advertisement.localName + ' rssi:' + rssi + ' cnt:' + node.rssiCnt + ' base:' + node.rssiBase + " RSSI:" + Math.round(node.rssiBase / node.rssiCnt));
 });
 
 noble.on('scanStop', () => {
