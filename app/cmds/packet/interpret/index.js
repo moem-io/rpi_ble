@@ -15,12 +15,12 @@ function interpretPacket() {
 
       if (len) {
         for (var i = 0; i < len; i++) {
-          var addr = pUtil.pData(data.toString('hex', i * 6, (i + 1) * 6), true, true);
-          var rssi = -(data.readUInt8((i * 6) + 6));
+          var addr = pUtil.pData(data.subarray(i * 7, (i + 1) * 7 - 1), true, true);
+          var rssi = -(data[(i + 1) * 7 - 1]);
 
-          (addr !== app.dev.addr) ? app.net.nodeCnt++ : ''; //Block Counting Self.
-
-          proc.push(query.addNode(app.net.nodeCnt, header.src, addr, rssi));
+          proc.push(query.getNode({addr: addr})
+            .catch(Sql.EmptyResultError, () => app.net.nodeCnt++)
+            .then(() => query.addNode(app.net.nodeCnt, header.src, addr, rssi)));
         }
       }
       else
