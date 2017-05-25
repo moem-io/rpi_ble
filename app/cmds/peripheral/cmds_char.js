@@ -64,9 +64,13 @@ CmdsData1Char.prototype.onWriteRequest = function (data, offset, withoutResponse
 CmdsData2Char.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
   validateWrite(data, offset, callback, 20);
   bleno.log("Data 2 Added");
-  var tmp = app.rxP[app.rxP.totalCnt].data;
-  app.rxP[app.rxP.totalCnt].data = tmp + data;
-  bleno.log("Data 2 : " + app.rxP[app.rxP.totalCnt].data);
+  var tmp = new Uint8Array(app.rxP[app.rxP.totalCnt].data.length + 20);
+  tmp.set(app.rxP[app.rxP.totalCnt].data, 0);
+  tmp.set(data, app.rxP[app.rxP.totalCnt].data.length);
+
+  app.rxP[app.rxP.totalCnt].data = tmp;
+  bleno.log("Data 2 : " + pUtil.pData(app.rxP[app.rxP.totalCnt].data, 0, true));
+
   resultUpdate(cmdsBase.ResultType.DATA2, callback);
   dataCount(2);
 };
