@@ -9,13 +9,13 @@ var addHub = function (addr) {
 
 var addNode = function (nodeNo, parentNo, addr, rssi) {
   addr = addr.replace(/:/g, ''); //TODO: Maybe Duplicate ?
-  cmds.log("Found Node : " + addr + " nodeNo : " + nodeNo);
+  cmds.log("Found Node : " + addr + " nodeNo : " + nodeNo + " rssi : " + rssi);
 
   return getNode({nodeNo: parentNo})
     .then(p => retrieveNode({addr: addr, nodeNo: nodeNo, depth: p.get('depth') + 1})
-      .spread(c => pBuild.run(cmdsBase.BuildType.SCAN_REQUEST, c.get('nodeNo'))
-        .then(() => retrieveNetwork({parent: p.get('id'), child: c.get('id'), rssi: rssi})
-        )))
+      .spread((c, newRow) => (!newRow) ? retrieveNetwork({parent: p.get('id'), child: c.get('id'), rssi: rssi}) :
+        pBuild.run(cmdsBase.BuildType.SCAN_REQUEST, c.get('nodeNo'))
+          .then(() => retrieveNetwork({parent: p.get('id'), child: c.get('id'), rssi: rssi}))))
     .spread((net) => updateNetwork({rssi: rssi, net: net.get('id')}));
 };
 
@@ -27,8 +27,9 @@ var retrieveNode = function (opt) {
   return db.Nodes.findOrCreate({where: {addr: opt.addr}, defaults: {nodeNo: opt.nodeNo, depth: opt.depth}});
 };
 
+
 var getAllNetwork = function () {
-  return db.Networks.findAll();
+  return db.Networks.findAll({include: [{model: db.Nodes, as: 'Parent'}, {model: db.Nodes, as: 'Child'}]});
 };
 
 var retrieveNetwork = function (opt) {
@@ -43,11 +44,11 @@ var updateNetwork = function (opt) {
 };
 
 var addPath = function (nodeNo, path) {
-  return getNode({nodeNo: nodeNo}).then((node) => retrievePath({target: node.get('id'), path: path}));
+  return getNode({nodeNo: nodeNo}).then((node) => retrievePath({nodeId: node.get('id'), path: path}));
 };
 
 var retrievePath = function (opt) {
-  return db.Paths.findOrCreate({where: {target: opt.target}, defaults: {path: opt.path}});
+  return db.Paths.findOrCreate({where: {nodeId: opt.target}, defaults: {path: opt.path}});
 };
 
 module.exports.addHub = addHub;
