@@ -7,7 +7,7 @@ module.exports = function (sql, SQL) {
       primaryKey: true,
       autoIncrement: true
     },
-    target: {
+    nodeId: {
       type: SQL.INTEGER.UNSIGNED,
       allowNull: false,
       unique: true

@@ -102,24 +102,8 @@ var onStandBy = function () {
 
 var netSet = function () {
   cmds.log("Network Scanning out of : " + app.net.responseCnt + "/" + app.net.nodeCnt);
-  var G = new jsnx.Graph();
-  var proc = [];
 
-  query.getAllNetwork().then(net => net.forEach(
-    conn => {
-      G.addEdge(conn.Parent.nodeNo, conn.Child.nodeNo, {weight: conn.rssi});
-      cmds.log(conn.Parent.nodeNo + " -> " + conn.Child.nodeNo + " RSSI : " + conn.rssi);
-    }
-  )).then(() => {
-    for (var i = 1; i <= app.net.nodeCnt; i++) {
-      var res = jsnx.bidirectionalShortestPath(G, 0, i, {weight: 'weight'});
-      res.shift();
-      res.pop();
-      res = res.join('-');
-      proc.push(query.addPath(i, res));
-    }
-    return Promise.all(proc);
-  }).then(() => {
+  query.addAllPath(app.net.nodeCnt).then(() => {
     app.net.set = true;
     cmds.log("Network All Set!");
     cmds.emit('standBy');
@@ -132,10 +116,11 @@ var onCScan = function () {
 };
 
 var findRoute = function (target) {
-  return query.getNode({nodeNo: target})
-    .then(node => (node.get('addr') in app.net.disc) ? app.net.disc[node.get('addr')] : () => {
-      throw new Error("Not Found!") //May not work with Async Calls.
-    });
+  return query.getNode({nodeNo: target}).then(n1 =>
+    (app.net.disc[n1.addr]) ? app.net.disc[n1.addr] : query.getPath({nodeId: n1.id})
+      .then(res => query.getNode({nodeNo: res.path[0]}))
+      .then(n2 => (app.net.disc[n2.addr]) ? app.net.disc[n2.addr] : reject("Error"))
+  )
 };
 
 var onCSend = function () {

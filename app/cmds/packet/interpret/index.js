@@ -16,11 +16,9 @@ function interpretPacket() {
       if (len) {
         for (var i = 0; i < len; i++) {
           var addr = pUtil.pData(data.subarray(i * 7, (i + 1) * 7 - 1), true, true);
-          var rssi = -(data[(i + 1) * 7 - 1]);
+          var rssi = -(data.readUInt8((i + 1) * 7 - 1));
 
-          proc.push(query.getNode({addr: addr})
-            .catch(Sql.EmptyResultError, () => app.net.nodeCnt++)
-            .then(() => query.addNode(app.net.nodeCnt, header.src, addr, rssi)));
+          proc.push(onScanRes(addr, header, rssi));
         }
       }
       else
@@ -41,10 +39,17 @@ function interpretPacket() {
       break;
   }
 
-  return Promise.all(proc).then(() => {
-    app.rxP.procCnt++;
-    bleno.emit('interpretResult');
-  });
+  return Promise.all(proc)
+    .then(() => query.addAllPath(app.net.nodeCnt))
+    .then(() => {
+      app.rxP.procCnt++;
+      bleno.emit('interpretResult');
+    });
 }
 
+function onScanRes(addr, header, rssi) {
+  return query.getNode({addr: addr})
+    .catch(Sql.EmptyResultError, () => app.net.nodeCnt++)
+    .then(() => query.addNode(app.net.nodeCnt, header.src, addr, rssi));
+}
 module.exports.run = interpretPacket;
