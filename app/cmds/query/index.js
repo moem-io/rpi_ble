@@ -9,7 +9,7 @@ var addHub = function (addr) {
 };
 
 var addNode = function (nodeNo, parentNo, addr, rssi) {
-  addr = addr.replace(/:/g, ''); //TODO: Maybe Duplicate ?
+  addr = addr.replace(/:/g, '');
   cmds.log("Found Node : " + addr + " nodeNo : " + nodeNo + " rssi : " + rssi);
 
   return getNode({nodeNo: parentNo})

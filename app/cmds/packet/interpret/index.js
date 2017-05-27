@@ -16,7 +16,7 @@ function interpretPacket() {
       if (len) {
         for (var i = 0; i < len; i++) {
           var addr = pUtil.pData(data.subarray(i * 7, (i + 1) * 7 - 1), true, true);
-          var rssi = -(data.readUInt8((i + 1) * 7 - 1));
+          var rssi = promiseRssi(data[(i + 1) * 7 - 1]);
 
           proc.push(onScanRes(addr, header, rssi));
         }
@@ -45,6 +45,10 @@ function interpretPacket() {
       app.rxP.procCnt++;
       bleno.emit('interpretResult');
     });
+}
+
+function promiseRssi(rssi) {
+  return -(rssi);
 }
 
 function onScanRes(addr, header, rssi) {

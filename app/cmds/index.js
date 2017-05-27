@@ -89,6 +89,10 @@ var onStandBy = function () {
   if (!app.net.nodeCnt) {
     cmds.log("Network Not Constructed!");
     this.emit('cScan');
+  } else if (app.txP.procCnt > app.rxP.totalCnt) {
+    cmds.log(app.txP.procCnt + "/" + app.rxP.totalCnt);
+    cmds.log("Waiting for Packet to receive to be End");
+    this.emit('pStandBy');
   } else if (app.txP.totalCnt > app.txP.procCnt) {
     cmds.log("Packet Send.");
     this.emit('cSend');
