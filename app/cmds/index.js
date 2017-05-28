@@ -85,7 +85,7 @@ var onInit = function () {
 // Sequence Choose
 var onStandBy = function () {
   cmds.log("standBy Mode.");
-
+  setTimeout(() => {
   if (!app.net.nodeCnt) {
     cmds.log("Network Not Constructed!");
     this.emit('cScan');
@@ -102,6 +102,7 @@ var onStandBy = function () {
     cmds.log("Network : " + app.net.set + " Waiting for Accept!");
     this.emit('pStandBy');
   }
+  },500);
 };
 
 var netSet = function () {
