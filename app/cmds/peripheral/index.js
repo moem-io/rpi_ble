@@ -23,7 +23,7 @@ bleno.on('accept', () => {
 });
 
 function cmdsStartAdvertise() {
-  bleno.startAdvertising(name, [cmdsService.uuid]);
+  bleno.startAdvertising(name, []);
 }
 
 module.exports.startAdvertise = cmdsStartAdvertise;
