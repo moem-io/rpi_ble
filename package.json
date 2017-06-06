@@ -33,6 +33,7 @@
     "jsnetworkx": "^0.3.4",
     "mysql": "^2.13.0",
     "noble": "^1.8.0",
+    "request": "^2.81.0",
     "sequelize": "^3.30.4"
   }
 }
