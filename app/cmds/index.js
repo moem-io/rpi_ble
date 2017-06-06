@@ -85,6 +85,7 @@ var onInit = function () {
 // Sequence Choose
 var onStandBy = function () {
   cmds.log("standBy Mode.");
+  query.addAllPath(3);
   setTimeout(() => {
   if (!app.net.nodeCnt) {
     cmds.log("Network Not Constructed!");
@@ -102,7 +103,7 @@ var onStandBy = function () {
     cmds.log("Network : " + app.net.set + " Waiting for Accept!");
     this.emit('pStandBy');
   }
-  },500);
+  }, 1000);
 };
 
 var netSet = function () {
@@ -131,8 +132,8 @@ var findRoute = function (target) {
 var onCSend = function () {
   var header = pUtil.pHeader(app.txP[app.txP.procCnt].header);
   cmds.log("Dispatching Packet");
-  return findRoute(header.tgt).then((node) => cen.cmdsConn(node));
-};
+  return findRoute(header.tgt).then((node) => cen.cmdsConn(node)).catch(e => console.log(e));
+}; // TODO: For Error Logging when Failure Connection
 
 var onCSendDone = function () {
   cfgUpdate(); //State Sync

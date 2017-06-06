@@ -89,7 +89,7 @@ bleno.on('interpretResult', () => {
 
 var dataCount = (cnt) => {
   var header = pUtil.pHeader(app.rxP[app.rxP.procCnt].header);
-  (header.idxTot === cnt) ? interpretEmit() : '';
+  (header.idxTot === cnt) ? interpretEmit() : bleno.log("Data " + header.idxTot + " " + cnt);
 };
 
 var interpretEmit = () => {

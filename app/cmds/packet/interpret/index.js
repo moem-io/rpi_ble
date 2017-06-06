@@ -22,7 +22,7 @@ function interpretPacket() {
         }
       }
       else
-        cmdsBase.log("End Node. None Found");
+        cmds.log("End Node. None Found");
       break;
 
     case cmdsBase.BuildType.SENSOR_STATE_ATTACH:
