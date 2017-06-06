@@ -72,9 +72,11 @@ var addAllPath = function (nodeCnt) {
       res = res.join('-');
       proc.push(addPath(i, res));
     }
+    //[TODO] : PROMISE REJECT NON-ERROR
     return Promise.all(proc)
       .then(() => getAllPath()
-        .then((paths) => extractPath(paths, G, sendData)));
+        .then((paths) => extractPath(paths, G, sendData)))
+      .catch(e => console.log(e));
   });
 };
 
@@ -84,7 +86,7 @@ var sendData = function (data) {
     method: 'POST',
     json: data
   };
-
+  console.log(data);
   return request(opt, (e, res, body) => {
     (body == 'success') ? console.log(body + 1) : console.log(body);
   });

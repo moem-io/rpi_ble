@@ -4,7 +4,7 @@ var util = require('util');
 var events = require('events');
 var db = require("../models");
 var env = process.env.NODE_ENV || "development";
-var jsnx = require('jsnetworkx');
+
 
 var noble = require('noble');
 var bleno = require('bleno');
@@ -16,8 +16,10 @@ var per = require('./peripheral');
 
 var pInterpret = require('./packet/interpret');
 var pUtil = require('./packet/util');
+var pBuild = require('./packet/build');
 
 var query = require('./query');
+var amqp = require('amqplib/callback_api');
 
 var CmdsBle = function () {
   this.log = (str) => console.log("[APP] " + str);
@@ -34,6 +36,21 @@ var CmdsBle = function () {
 
 util.inherits(CmdsBle, events.EventEmitter);
 global.cmds = new CmdsBle();
+
+amqp.connect('amqp://node_rpi:node_rpi@localhost/nodeHost', function (err, conn) {
+  conn.createChannel(function (err, ch) {
+    var q = 'led_q';
+
+    ch.assertQueue(q, {durable: false});
+    cmds.log("AMQP Listening", q);
+    ch.consume(q, (msg) => {
+      console.log(" [x] Received %s", msg.content.toString());
+      pBuild();
+    }, {noAck: true});
+    cmds.emit('init');
+  });
+});
+
 
 var devPreset = function () {
   (env === "development") ? cmds.log("Develop ENV : Re-setting") : '';
@@ -85,24 +102,24 @@ var onInit = function () {
 // Sequence Choose
 var onStandBy = function () {
   cmds.log("standBy Mode.");
-  query.addAllPath(3);
+  // query.addAllPath(3);
   setTimeout(() => {
-  if (!app.net.nodeCnt) {
-    cmds.log("Network Not Constructed!");
-    this.emit('cScan');
-  } else if (app.txP.procCnt > app.rxP.totalCnt) {
-    cmds.log(app.txP.procCnt + "/" + app.rxP.totalCnt);
-    cmds.log("Waiting for Packet to receive to be End");
-    this.emit('pStandBy');
-  } else if (app.txP.totalCnt > app.txP.procCnt) {
-    cmds.log("Packet Send.");
-    this.emit('cSend');
-  } else if (app.net.set === false && app.net.responseCnt === app.net.nodeCnt) {
-    netSet();
-  } else {
-    cmds.log("Network : " + app.net.set + " Waiting for Accept!");
-    this.emit('pStandBy');
-  }
+    if (!app.net.nodeCnt) {
+      cmds.log("Network Not Constructed!");
+      this.emit('cScan');
+    } else if (app.txP.procCnt > app.rxP.totalCnt) {
+      cmds.log(app.txP.procCnt + "/" + app.rxP.totalCnt);
+      cmds.log("Waiting for Packet to receive to be End");
+      this.emit('pStandBy');
+    } else if (app.txP.totalCnt > app.txP.procCnt) {
+      cmds.log("Packet Send.");
+      this.emit('cSend');
+    } else if (app.net.set === false && app.net.responseCnt === app.net.nodeCnt) {
+      netSet();
+    } else {
+      cmds.log("Network : " + app.net.set + " Waiting for Accept!");
+      this.emit('pStandBy');
+    }
   }, 1000);
 };
 
@@ -166,5 +183,3 @@ cmds.on('pStandBy', onPStandBy);
 
 cmds.on('interpret', onInterpret);
 cmds.on('interpretDone', onInterpretDone);
-
-cmds.emit('init');
