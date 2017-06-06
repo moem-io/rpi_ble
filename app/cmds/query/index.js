@@ -2,6 +2,7 @@ var db = require("../../models");
 var cmdsBase = require('../cmds_base');
 var pBuild = require('../packet/build');
 var jsnx = require('jsnetworkx');
+var request = require('request');
 
 var addHub = function (addr) {
   return retrieveNode({addr: addr, nodeNo: app.dev.id, depth: app.dev.depth})
@@ -51,10 +52,16 @@ var addPath = function (nodeNo, path) {
 var addAllPath = function (nodeCnt) {
   var G = new jsnx.Graph();
   var proc = [];
+  var pathGraph =
+    {
+      'node': [
+        {name: 'Hub_0', radius: '10', rgb: '#5f5f5f'}
+      ], 'link': []
+    };
 
   return getAllNetwork().then(net => net.forEach(
     conn => {
-      G.addEdge(conn.Parent.nodeNo, conn.Child.nodeNo, {weight: conn.rssi});
+      G.addEdge(conn.Parent.nodeNo, conn.Child.nodeNo, {weight: Math.abs(conn.rssi)});
       cmds.log(conn.Parent.nodeNo + " -> " + conn.Child.nodeNo + " RSSI : " + conn.rssi);
     }
   )).then(() => {
@@ -65,8 +72,75 @@ var addAllPath = function (nodeCnt) {
       res = res.join('-');
       proc.push(addPath(i, res));
     }
-    return Promise.all(proc);
-  })
+    return Promise.all(proc)
+      .then(() => getAllPath()
+        .then((paths) => extractPath(paths, G, sendData)));
+  });
+};
+
+var sendData = function (data) {
+  var opt = {
+    uri: process.env.API_HOST + process.env.NODE_ENDPOINT,
+    method: 'POST',
+    json: data
+  };
+
+  return request(opt, (e, res, body) => {
+    (body == 'success') ? console.log(body + 1) : console.log(body);
+  });
+};
+
+function getRandomColor() {
+  var letters = '0123456789ABCDEF';
+  var color = '#';
+  for (var i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
+var extractPath = function (paths, G, callback) {
+  var node = [{'name': '0_HUB', 'radius': '12', 'rgb': getRandomColor()}];
+  var link = [];
+  var extract = [];
+
+  paths.forEach(
+    (pathRow, idx, arr) => {
+      var pathTmp = [];
+
+      node = node.concat([{'name': pathRow.Node.nodeNo + '_Node', 'radius': '8', 'rgb': getRandomColor()}]);
+
+      (pathRow.path == '') ? '' : pathTmp = pathRow.path.split('-');
+      pathTmp.unshift(0);
+      pathTmp.push(pathRow.Node.nodeNo);
+
+      pathTmp = pathTmp.map(Number);
+
+      while (pathTmp.length > 1) {
+        var c = pathTmp.pop();
+        var p = pathTmp.slice(-1)[0];
+        var addTmp = true;
+
+        //TODO: toString Compare -> needs to be Fixed!
+        for (var i = 0; i < extract.length; i++) {
+          if ((extract[i].slice(0, 2).toString() == [p, c].toString())) {
+            addTmp = false;
+            break;
+          }
+        }
+
+        data = G.getEdgeData(p, c);
+        (addTmp) ? extract.push([p, c, data.weight]) : '';
+        (addTmp) ? link = link.concat([{'source': p, 'target': c, 'length': (data.weight)}]) : '';
+      }
+
+      (idx == arr.length - 1) ? callback({node: node, link: link}) : '';
+    }
+  );
+};
+
+var getAllPath = function () {
+  return db.Paths.findAll({include: [{model: db.Nodes, as: 'Node'}]});
 };
 
 var getPath = function (opt) {
@@ -79,7 +153,8 @@ var getPath = function (opt) {
 };
 
 var retrievePath = function (opt) {
-  return db.Paths.findOrCreate({where: {nodeId: opt.nodeId}, defaults: {path: opt.path}});
+  return db.Paths.findOrCreate({where: {nodeId: opt.nodeId}, defaults: {path: opt.path}})
+    .spread((path, newRow) => (!newRow) ? path.updateAttributes({path: opt.path}) : true);
 };
 
 module.exports.addHub = addHub;
@@ -95,4 +170,5 @@ module.exports.updateNetwork = updateNetwork;
 module.exports.addPath = addPath;
 module.exports.addAllPath = addAllPath;
 module.exports.getPath = getPath;
+module.exports.getAllPath = getAllPath;
 module.exports.retrievePath = retrievePath;
