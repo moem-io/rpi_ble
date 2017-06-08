@@ -17,9 +17,14 @@ var parseHeader = function (h) {
 };
 
 var buildData = function (opt) {
+  var buf = null;
   switch (opt.type) {
     case cmdsBase.BuildType.SCAN_REQUEST:
-      var buf = Buffer.from(parseData(opt.nodeAddr, true));
+      buf = Buffer.from(parseData(opt.nodeAddr, true));
+      break;
+
+    case cmdsBase.PacketType.NODE_LED_REQUEST:
+      buf = Buffer.from(opt.ledString);
       break;
 
     default:
@@ -45,7 +50,7 @@ var parseData = function (data, rev = false, str = false) {
       buf[(!rev) ? bufIdx : buf.length - bufIdx - 1] = "0x" + data[i] + data[i + 1];
       bufIdx++;
     }
-    return buf
+    return buf;
   }
 };
 

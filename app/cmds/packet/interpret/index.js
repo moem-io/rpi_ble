@@ -6,10 +6,12 @@ var bleno = require('bleno');
 function interpretPacket() {
   var header = pUtil.pHeader(app.rxP[app.rxP.procCnt].header);
   var data = app.rxP[app.rxP.procCnt].data;
+  var net = false;
   var proc = [];
 
   switch (header.type) {
-    case cmdsBase.BuildType.SCAN_RESPONSE:
+    case cmdsBase.PacketType.SCAN_RESPONSE:
+      net = true;
       app.net.responseCnt++;
       var len = pUtil.aData(data, 7);
 
@@ -25,28 +27,47 @@ function interpretPacket() {
         cmds.log("End Node. None Found");
       break;
 
-    case cmdsBase.BuildType.SENSOR_STATE_ATTACH:
+    case cmdsBase.PacketType.NODE_BUTTON_PRESSED:
+      proc.push(promiseQueue({in_node: header.src, in_sensor: header.srcSnsr}));
       break;
-    case cmdsBase.BuildType.SENSOR_STATE_DETACH:
+
+    case cmdsBase.PacketType.NODE_LED_RESPONSE:
+      cmds.log("LED ON!!");
       break;
-    case cmdsBase.BuildType.SENSOR_DATA_RESPONSE:
+
+    case cmdsBase.PacketType.SENSOR_STATE_ATTACH:
       break;
-    case cmdsBase.BuildType.NETWORK_ACK_RESPONSE:
+    case cmdsBase.PacketType.SENSOR_STATE_DETACH:
       break;
-    case cmdsBase.BuildType.NETWORK_JOIN_REQUEST:
+    case cmdsBase.PacketType.SENSOR_DATA_RESPONSE:
+      break;
+    case cmdsBase.PacketType.NETWORK_ACK_RESPONSE:
+      break;
+    case cmdsBase.PacketType.NETWORK_JOIN_REQUEST:
       break;
     default:
       break;
   }
 
   return Promise.all(proc)
-    .then(() => query.addAllPath(app.net.nodeCnt))
+    .then(() => (net) ? query.addAllPath(app.net.nodeCnt) : '')
     .then(() => {
       app.rxP.procCnt++;
       bleno.emit('interpretResult');
     });
 }
 
+function promiseQueue(opt) {
+  return query.getAllApp({in_node: opt.in_node, in_sensor: opt.in_sensor})
+    .then(apps => {
+      apps.forEach(
+        app => rabbitCh.sendToQueue('btn_q', Buffer.from(app.app_id + ',' + 1))
+      );
+      return true;
+    });
+}
+
+//For Promising Data values, while in async.
 function promiseRssi(rssi) {
   return -(rssi);
 }
