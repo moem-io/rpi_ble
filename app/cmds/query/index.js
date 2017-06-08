@@ -86,7 +86,7 @@ var sendData = function (data) {
     method: 'POST',
     json: data
   };
-  console.log(data);
+  // console.log(data);
   return request(opt, (e, res, body) => {
     (body == 'success') ? console.log(body + 1) : console.log(body);
   });
@@ -159,6 +159,15 @@ var retrievePath = function (opt) {
     .spread((path, newRow) => (!newRow) ? path.updateAttributes({path: opt.path}) : true);
 };
 
+//opt.*_node might be not Zero.
+var getAllApp = function (opt) {
+  if (opt.in_node) {
+    return db.Apps.findAll({where: {in_node: opt.in_node, in_sensor: opt.in_sensor}})
+  } else if (opt.out_node) {
+    return db.Apps.findAll({where: {out_node: opt.out_node, out_sensor: opt.out_sensor}})
+  }
+};
+
 module.exports.addHub = addHub;
 module.exports.addNode = addNode;
 
@@ -174,3 +183,5 @@ module.exports.addAllPath = addAllPath;
 module.exports.getPath = getPath;
 module.exports.getAllPath = getAllPath;
 module.exports.retrievePath = retrievePath;
+
+module.exports.getAllApp = getAllApp;

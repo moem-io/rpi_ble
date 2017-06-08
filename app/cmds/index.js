@@ -21,6 +21,8 @@ var pBuild = require('./packet/build');
 var query = require('./query');
 var amqp = require('amqplib/callback_api');
 
+var cmdsBase = require('./cmds_base');
+
 var CmdsBle = function () {
   this.log = (str) => console.log("[APP] " + str);
   this.error = (str) => console.error("[APP] " + str);
@@ -36,16 +38,23 @@ var CmdsBle = function () {
 
 util.inherits(CmdsBle, events.EventEmitter);
 global.cmds = new CmdsBle();
+global.rabbitCh = null;
 
 amqp.connect('amqp://node_rpi:node_rpi@localhost/nodeHost', function (err, conn) {
   conn.createChannel(function (err, ch) {
+    global.rabbitCh = ch;
     var q = 'led_q';
 
-    ch.assertQueue(q, {durable: false});
-    cmds.log("AMQP Listening", q);
-    ch.consume(q, (msg) => {
+    rabbitCh.assertQueue('led_q', {durable: false});
+    rabbitCh.assertQueue('btn_q', {durable: false});
+    cmds.log("AMQP Listening", 'led_q');
+    rabbitCh.consume('led_q', (msg) => {
       console.log(" [x] Received %s", msg.content.toString());
-      pBuild();
+
+      //TODO: NODE Hard coded.
+      pBuild.run(cmdsBase.PacketType.NODE_LED_REQUEST, 1, {ledString: msg.content.toString().toUpperCase()})
+        .then(() => cmds.emit('standBy'));
+
     }, {noAck: true});
     cmds.emit('init');
   });
