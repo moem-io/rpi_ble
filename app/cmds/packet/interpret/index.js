@@ -58,10 +58,11 @@ function interpretPacket() {
 }
 
 function promiseQueue(opt) {
+  //TODO : Node NO (ID) Doesn't match.
   return query.getAllApp({in_node: opt.in_node, in_sensor: opt.in_sensor})
     .then(apps => {
       apps.forEach(
-        app => rabbitCh.sendToQueue('btn_q', Buffer.from(app.app_id + ',' + 1))
+        app => rabbitCh.sendToQueue('btn_q', Buffer.from(app.app_id + ',input,' + 1))
       );
       return true;
     });

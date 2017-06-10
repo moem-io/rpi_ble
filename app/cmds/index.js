@@ -43,8 +43,6 @@ global.rabbitCh = null;
 amqp.connect('amqp://node_rpi:node_rpi@localhost/nodeHost', function (err, conn) {
   conn.createChannel(function (err, ch) {
     global.rabbitCh = ch;
-    var q = 'led_q';
-
     rabbitCh.assertQueue('led_q', {durable: false});
     rabbitCh.assertQueue('btn_q', {durable: false});
     cmds.log("AMQP Listening", 'led_q');
