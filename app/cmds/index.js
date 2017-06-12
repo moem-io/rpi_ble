@@ -49,8 +49,9 @@ amqp.connect('amqp://node_rpi:node_rpi@localhost/nodeHost', function (err, conn)
     rabbitCh.consume('led_q', (msg) => {
       console.log(" [x] Received %s", msg.content.toString());
 
+      var rgb = msg.content.toString().split(',');
       //TODO: NODE Hard coded.
-      pBuild.run(cmdsBase.PacketType.NODE_LED_REQUEST, 1, {ledString: msg.content.toString().toUpperCase()})
+      pBuild.run(cmdsBase.PacketType.NODE_LED_REQUEST, rgb[0], {ledString: rgb[2].toUpperCase()})
         .then(() => cmds.emit('standBy'));
 
     }, {noAck: true});

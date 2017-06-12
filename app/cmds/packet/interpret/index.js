@@ -62,7 +62,10 @@ function promiseQueue(opt) {
   return query.getAllApp({in_node: opt.in_node, in_sensor: opt.in_sensor})
     .then(apps => {
       apps.forEach(
-        app => rabbitCh.sendToQueue('btn_q', Buffer.from(app.app_id + ',input,' + 1))
+        app => {
+          cmds.log(app.app_id + 'Found!! Send to Btn_q!!');
+          return rabbitCh.sendToQueue('btn_q', Buffer.from(app.app_id + ',input,' + 1))
+        }
       );
       return true;
     });
