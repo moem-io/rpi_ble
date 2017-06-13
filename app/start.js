@@ -7,13 +7,16 @@ try {
 
 var cfgFile = './config/default.json';
 var cJSON = require('circular-json');
+var _ = require('lodash');
 
 global.cfgUpdate = function () {
   fs.writeFile(cfgFile, cJSON.stringify(app));
 };
 
-global.app = require('config');
-(app.has('dev.addr')) ? console.log("Start Device!") : console.log("Init Device!");
+var cfgData = fs.readFileSync(cfgFile);
+global.app = (cfgData.length) ? cJSON.parse(cfgData) : {};
+
+(_.has(app, 'dev.addr')) ? console.log("Start Device!") : console.log("Init Device!");
 
 global.Sql = null;
 
