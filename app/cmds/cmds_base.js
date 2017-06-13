@@ -7,7 +7,7 @@ const ResultUuid = '00009004000000108000001122334455';
 const scanTimeout = 5000;
 const disconnectTimeout = 100;
 
-const PacketType = {
+const PktType = {
   SCAN_REQUEST: 1,
   SCAN_RESPONSE: 2,
   SENSOR_STATE_ATTACH: 3,
@@ -31,13 +31,7 @@ const PacketType = {
   NET_JOIN_RESPONSE: 105
 };
 
-const BuildType = {
-  SCAN_REQUEST: 1,
-  SCAN_RESPONSE: 2,
-  PACKET_ROUTE: 3
-};
-
-const ResultType = {
+const RsltType = {
   IDLE: 0,
   HEADER: 1,
   DATA1: 2,
@@ -45,6 +39,11 @@ const ResultType = {
   INTERPRET: 4,
   INTERPRET_ERROR: 5,
   ERROR: 255
+};
+
+const ErrType = {
+  SUCCESS: 0,
+  ACK_ERROR: 1
 };
 
 module.exports.BaseUuid = BaseUuid;
@@ -56,6 +55,6 @@ module.exports.ResultUuid = ResultUuid;
 module.exports.scanTimeout = scanTimeout;
 module.exports.disconnectTimeout = disconnectTimeout;
 
-module.exports.PacketType = PacketType;
-module.exports.BuildType = BuildType;
-module.exports.ResultType = ResultType;
+module.exports.PktType = PktType;
+module.exports.RsltType = RsltType;
+module.exports.ErrType = ErrType;

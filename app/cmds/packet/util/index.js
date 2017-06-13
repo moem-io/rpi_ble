@@ -3,7 +3,7 @@ var cmdsBase = require('../../cmds_base');
 var buildHeader = function (h) {
   var type = h.type;
 
-  var errType = h.errType || cmdsBase.ErrorType.SUCCESS;
+  var errType = h.errType || cmdsBase.ErrType.SUCCESS;
   var idxTot = h.idxTot || 1;
   var src = h.src || app.dev.id;
   var srcSnsr = h.srcSnsr || 0;
@@ -29,11 +29,11 @@ var parseHeader = function (h) {
 var buildData = function (opt) {
   var buf = null;
   switch (opt.type) {
-    case cmdsBase.PacketType.SCAN_REQUEST:
+    case cmdsBase.PktType.SCAN_REQUEST:
       buf = Buffer.from(parseData(opt.nodeAddr, true));
       break;
 
-    case cmdsBase.PacketType.NODE_LED_REQUEST:
+    case cmdsBase.PktType.NODE_LED_REQUEST:
       buf = Buffer.from(opt.ledString);
       break;
 

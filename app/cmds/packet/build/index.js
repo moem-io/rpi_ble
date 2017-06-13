@@ -11,24 +11,24 @@ function buildPacket(type, target, opt) {
   var header, data;
 
   switch (type) {
-    case cmdsBase.PacketType.SCAN_REQUEST:
-    case cmdsBase.PacketType.NET_ACK_REQUEST:
+    case cmdsBase.PktType.SCAN_REQUEST:
+    case cmdsBase.PktType.NET_ACK_REQUEST:
       header = pUtil.bHeader({type: type, tgt: target, tgtSnsr: 0});
 
       data = query.getNode({nodeNo: target})
         .then((node) => pUtil.bData({type: type, nodeAddr: node.addr}));
       break;
 
-    case cmdsBase.PacketType.NODE_LED_REQUEST:
+    case cmdsBase.PktType.NODE_LED_REQUEST:
       header = pUtil.bHeader({type: type, tgt: target, tgtSnsr: 0});
 
       data = pUtil.bData({type: type, ledString: opt.ledString});
       break;
 
-    case cmdsBase.PacketType.SENSOR_DATA_REQUEST:
+    case cmdsBase.PktType.SENSOR_DATA_REQUEST:
       break;
 
-    case cmdsBase.PacketType.NET_JOIN_REQUEST:
+    case cmdsBase.PktType.NET_JOIN_REQUEST:
       break;
     default:
       break;

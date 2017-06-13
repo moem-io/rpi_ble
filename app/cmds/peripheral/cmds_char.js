@@ -49,7 +49,7 @@ CmdsHeaderChar.prototype.onWriteRequest = function (data, offset, withoutRespons
   app.rxP[app.rxP.totalCnt] = {header: data, data: null};
   app.rxP.headerCnt++;
 
-  resultUpdate(cmdsBase.ResultType.HEADER);
+  resultUpdate(cmdsBase.RsltType.HEADER);
 };
 
 CmdsData1Char.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
@@ -57,7 +57,7 @@ CmdsData1Char.prototype.onWriteRequest = function (data, offset, withoutResponse
   bleno.log("Data 1 Added");
   app.rxP[app.rxP.totalCnt].data = data;
   bleno.log("Data 1 : " + pUtil.pData(app.rxP[app.rxP.totalCnt].data, 0, true));
-  resultUpdate(cmdsBase.ResultType.DATA1, callback);
+  resultUpdate(cmdsBase.RsltType.DATA1, callback);
   dataCount(1);
 };
 
@@ -71,19 +71,19 @@ CmdsData2Char.prototype.onWriteRequest = function (data, offset, withoutResponse
   app.rxP[app.rxP.totalCnt].data = tmp;
   bleno.log("Data 2 : " + pUtil.pData(app.rxP[app.rxP.totalCnt].data, 0, true));
 
-  resultUpdate(cmdsBase.ResultType.DATA2, callback);
+  resultUpdate(cmdsBase.RsltType.DATA2, callback);
   dataCount(2);
 };
 
 CmdsResultChar.prototype.onSubscribe = function (maxSize, updateValueCallback) {
   bleno.log("Subscribe Complete");
   resUpdate = updateValueCallback;
-  resultUpdate(cmdsBase.ResultType.IDLE);
+  resultUpdate(cmdsBase.RsltType.IDLE);
 };
 
 bleno.on('interpretResult', () => {
   bleno.log('Dispatching Interpret Result. Waiting for Disconnection.');
-  resultUpdate(cmdsBase.ResultType.INTERPRET);
+  resultUpdate(cmdsBase.RsltType.INTERPRET);
   cmds.emit('interpretDone');
 });
 
@@ -104,7 +104,7 @@ var resultUpdate = (resType, callback) => {
 };
 
 var errHandler = () => {
-  resultUpdate(cmdsBase.ResultType.ERROR);
+  resultUpdate(cmdsBase.RsltType.ERROR);
   //TODO: ERROR HANDLING.
   callback(this.RESULT_UNLIKELY_ERROR);
 };
