@@ -4,60 +4,39 @@ var cmdsBase = require("../../cmds_base");
 
 function buildPacket(type, target, opt) {
   if (target === app.dev.id) {
-    var skip = cmds.log("Self Packet. Skipping");
-    return Promise.all([skip]);
+    cmds.log("Self Packet. Skipping");
+    return Promise.resolve();
   }
 
-  var header = Promise.resolve();
-  var data = Promise.resolve();
+  var header, data;
 
   switch (type) {
-    case cmdsBase.BuildType.SCAN_REQUEST:
-      header = Promise.resolve(
-        pUtil.bHeader({
-          type: type,
-          idx: 1,
-          idxTot: 1,
-          src: app.dev.id,
-          srcSnsr: 0,
-          tgt: target,
-          tgtSnsr: 0
-        }));
+    case cmdsBase.PacketType.SCAN_REQUEST:
+    case cmdsBase.PacketType.NET_ACK_REQUEST:
+      header = pUtil.bHeader({type: type, tgt: target, tgtSnsr: 0});
 
-      data = Promise.resolve(query.getNode({nodeNo: target})
-        .then((node) => pUtil.bData({type: type, nodeAddr: node.addr})));
-      break;
-
-    case cmdsBase.BuildType.SENSOR_DATA_REQUEST:
+      data = query.getNode({nodeNo: target})
+        .then((node) => pUtil.bData({type: type, nodeAddr: node.addr}));
       break;
 
     case cmdsBase.PacketType.NODE_LED_REQUEST:
-      header = Promise.resolve(
-        pUtil.bHeader({
-          type: type,
-          idx: 1,
-          idxTot: 1,
-          src: app.dev.id,
-          srcSnsr: 0,
-          tgt: target,
-          tgtSnsr: 0
-        }));
+      header = pUtil.bHeader({type: type, tgt: target, tgtSnsr: 0});
 
-      data = Promise.resolve(pUtil.bData({type: type, ledString: opt.ledString}));
+      data = pUtil.bData({type: type, ledString: opt.ledString});
       break;
-    case cmdsBase.BuildType.NETWORK_ACK_REQUEST:
+
+    case cmdsBase.PacketType.SENSOR_DATA_REQUEST:
       break;
-    case cmdsBase.BuildType.NETWORK_JOIN_REQUEST:
+
+    case cmdsBase.PacketType.NET_JOIN_REQUEST:
       break;
     default:
       break;
   }
 
-  return Promise.all([header, data]).then((res) => {
-      var packet = {header: res[0], data: res[1]};
-    app.txP[app.txP.totalCnt] = packet;
+  return Promise.all([Promise.resolve(header), Promise.resolve(data)]).then((res) => {
+    app.txP[app.txP.totalCnt] = {header: res[0], data: res[1]};
     app.txP.totalCnt++;
-
       return true;
     }
   )

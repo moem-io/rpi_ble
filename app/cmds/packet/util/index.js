@@ -1,13 +1,23 @@
 var cmdsBase = require('../../cmds_base');
 
 var buildHeader = function (h) {
-  return Buffer.from([h.type, h.idx, h.idxTot, h.src, h.srcSnsr, h.tgt, h.tgtSnsr]);
+  var type = h.type;
+
+  var errType = h.errType || cmdsBase.ErrorType.SUCCESS;
+  var idxTot = h.idxTot || 1;
+  var src = h.src || app.dev.id;
+  var srcSnsr = h.srcSnsr || 0;
+
+  var tgt = h.tgt;
+  var tgtSnsr = h.tgtSnsr;
+
+  return Buffer.from([type, errType, idxTot, src, srcSnsr, tgt, tgtSnsr]);
 };
 
 var parseHeader = function (h) {
   return {
     type: h.readUInt8(0),
-    idx: h.readUInt8(1),
+    errType: h.readUInt8(1),
     idxTot: h.readUInt8(2),
     src: h.readUInt8(3),
     srcSnsr: h.readUInt8(4),
@@ -19,7 +29,7 @@ var parseHeader = function (h) {
 var buildData = function (opt) {
   var buf = null;
   switch (opt.type) {
-    case cmdsBase.BuildType.SCAN_REQUEST:
+    case cmdsBase.PacketType.SCAN_REQUEST:
       buf = Buffer.from(parseData(opt.nodeAddr, true));
       break;
 
