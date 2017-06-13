@@ -10,7 +10,7 @@ function interpretPacket() {
   var proc = [];
 
   switch (header.type) {
-    case cmdsBase.PacketType.SCAN_RESPONSE:
+    case cmdsBase.PktType.SCAN_RESPONSE:
       net = true;
       app.net.responseCnt++;
       var len = pUtil.aData(data, 7);
@@ -27,23 +27,31 @@ function interpretPacket() {
         cmds.log("End Node. None Found");
       break;
 
-    case cmdsBase.PacketType.NODE_BUTTON_PRESSED:
+    case cmdsBase.PktType.NODE_BUTTON_PRESSED:
       proc.push(promiseQueue({in_node: header.src, in_sensor: header.srcSnsr}));
       break;
 
-    case cmdsBase.PacketType.NODE_LED_RESPONSE:
+    case cmdsBase.PktType.NODE_LED_RESPONSE:
       cmds.log("LED ON!!");
       break;
 
-    case cmdsBase.PacketType.SENSOR_STATE_ATTACH:
+    case cmdsBase.PktType.SENSOR_STATE_ATTACH:
       break;
-    case cmdsBase.PacketType.SENSOR_STATE_DETACH:
+    case cmdsBase.PktType.SENSOR_STATE_DETACH:
       break;
-    case cmdsBase.PacketType.SENSOR_DATA_RESPONSE:
+    case cmdsBase.PktType.SENSOR_DATA_RESPONSE:
       break;
-    case cmdsBase.PacketType.NETWORK_ACK_RESPONSE:
+
+    case cmdsBase.PktType.NET_ACK_RESPONSE:
+      //TODO: Error Handling.
+      app.dev.ackCnt++;
+      if (app.dev.ackTot === app.dev.ackCnt) {
+        app.dev.ack = true;
+        cmds.log("Ack Result! No, addr, depth, status, active");
+        proc.push(query.ackResult());
+      }
       break;
-    case cmdsBase.PacketType.NETWORK_JOIN_REQUEST:
+    case cmdsBase.PktType.NET_JOIN_REQUEST:
       break;
     default:
       break;
@@ -52,23 +60,21 @@ function interpretPacket() {
   return Promise.all(proc)
     .then(() => (net) ? query.addAllPath(app.net.nodeCnt) : '')
     .then(() => {
+      app.txP.send = false;
       app.rxP.procCnt++;
       bleno.emit('interpretResult');
     });
 }
 
 function promiseQueue(opt) {
-  //TODO : Node NO (ID) Doesn't match.
-  return query.getAllApp({in_node: opt.in_node, in_sensor: opt.in_sensor})
-    .then(apps => {
-      apps.forEach(
+  return query.getNode({nodeNo: opt.in_node}).then(
+    n => query.getAllApp({in_node: n.id, in_sensor: opt.in_sensor})
+      .then(apps => apps.forEach(
         app => {
-          cmds.log(app.app_id + 'Found!! Send to Btn_q!!');
-          return rabbitCh.sendToQueue('btn_q', Buffer.from(app.app_id + ',input,' + 1))
-        }
-      );
-      return true;
-    });
+          var q_name = "app_" + app.app_id;
+          cmds.log('Found!! Send to ' + q_name);
+          return rabbitCh.sendToQueue(q_name, Buffer.from(app.app_id + ',input,' + 1))
+        })));
 }
 
 //For Promising Data values, while in async.

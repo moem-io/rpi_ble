@@ -3,13 +3,13 @@
 var noble = require('noble');
 var query = require('../query');
 var cmdsBase = require('../cmds_base');
+var _ = require('lodash');
 
 var target = null;
 var cmdsCharHeader = null;
 var cmdsCharData1 = null;
 var cmdsCharData2 = null;
 var cmdsCharResult = null;
-
 function cmdsStartScan() {
   noble.startScanning([cmdsBase.BaseUuid], true);
   setTimeout(() => noble.stopScanning(), cmdsBase.scanTimeout);
@@ -25,22 +25,42 @@ noble.on('discover', node => {
 noble.on('scanStop', () => {
   noble.log("Scan Stopped");
   var nodes = Object.keys(noble._peripherals);
+  var cnt = 0;
 
   if (nodes.length) {
-    Promise.all(nodes.map((uuid) => {
-      var node = noble._peripherals[uuid];
-      var nodeAddr = node.address.replace(/:/g, '');
+    if (!app.dev.init && app.net.set && !app.dev.ack) {   //Re-Started Sequence. search pre-discovered Depth-1 device.
+      Promise.all(nodes.map((uuid) => {
+        var node = noble._peripherals[uuid];
+        var addr = node.address.replace(/:/g, '');
 
-      app.net.nodeCnt++;
-      app.net.disc[nodeAddr] = node;
+        if (_.has(app.net.disc, addr)) {
+          cmds.log("Depth-1 Node Found : " + addr);
+          app.net.disc[addr] = node;
+          cnt++;
+        }
 
-      return query.addNode(app.net.nodeCnt, app.dev.id, nodeAddr, Math.round(node.rssiBase / node.rssiCnt))
-    })).then(() => cmds.emit('cSend'));
-  } else {
-    noble.log("[Warning] : None Found. Restart Scanning.");
-    cmdsStartScan();
+      })).then(() => (cnt) ? cmds.emit('netAck') : restartScan()) //after Scanned, Build Ack Packet.
+    } else {
+      Promise.all(nodes.map((uuid) => {
+        var node = noble._peripherals[uuid];
+        var nodeAddr = node.address.replace(/:/g, '');
+
+        app.net.nodeCnt++;
+        app.net.disc[nodeAddr] = node;
+
+        return query.addNode(app.net.nodeCnt, app.dev.id, nodeAddr, Math.round(node.rssiBase / node.rssiCnt))
+      })).then(() => cmds.emit('cSend'))
+    }
+  }
+  else {
+    restartScan();
   }
 });
+
+function restartScan() {
+  noble.log("[Warning] : None Found. Restart Scanning.");
+  cmdsStartScan();
+}
 
 function cmdsConn(node) {
   target = node;
@@ -75,22 +95,22 @@ function cmdsConn(node) {
 
 function resultEmitter(resultCode) {
   switch (resultCode) {
-    case cmdsBase.ResultType.IDLE:
+    case cmdsBase.RsltType.IDLE:
       noble.log("Status : IDLE");
       sendHeader();
       break;
-    case cmdsBase.ResultType.HEADER:
+    case cmdsBase.RsltType.HEADER:
       noble.log("Status : HEADER");
       sendData1();
       break;
-    case cmdsBase.ResultType.DATA1:
+    case cmdsBase.RsltType.DATA1:
       noble.log("Status : DATA 1");
       sendData2();
       break;
-    case cmdsBase.ResultType.DATA2:
+    case cmdsBase.RsltType.DATA2:
       noble.log("Status : DATA 2");
       break;
-    case cmdsBase.ResultType.INTERPRET:
+    case cmdsBase.RsltType.INTERPRET:
       noble.log("Status : INTERPRET");
       app.txP.procCnt++;
       target.disconnect(() => {
@@ -99,11 +119,11 @@ function resultEmitter(resultCode) {
         cmds.emit('cSendDone');
       });
       break;
-    case cmdsBase.ResultType.INTERPRET_ERROR:
+    case cmdsBase.RsltType.INTERPRET_ERROR:
       noble.log("Status : INTERPRET_ERROR");
-      //TODO: ERROR HANDLING. resultEmitter(cmdsBase.ResultType.IDLE);
+      //TODO: ERROR HANDLING. resultEmitter(cmdsBase.RsltType.IDLE);
       break;
-    case cmdsBase.ResultType.ERROR:
+    case cmdsBase.RsltType.ERROR:
       noble.log("Status : ERROR");
       break;
     default:

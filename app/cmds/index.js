@@ -5,7 +5,6 @@ var events = require('events');
 var db = require("../models");
 var env = process.env.NODE_ENV || "development";
 
-
 var noble = require('noble');
 var bleno = require('bleno');
 noble.log = (str) => console.log("[C] " + str);
@@ -20,6 +19,7 @@ var pBuild = require('./packet/build');
 
 var query = require('./query');
 var amqp = require('amqplib/callback_api');
+var _ = require('lodash');
 
 var cmdsBase = require('./cmds_base');
 
@@ -51,7 +51,7 @@ amqp.connect('amqp://node_rpi:node_rpi@localhost/nodeHost', function (err, conn)
 
       var rgb = msg.content.toString().split(',');
       //TODO: NODE Hard coded.
-      pBuild.run(cmdsBase.PacketType.NODE_LED_REQUEST, rgb[0], {ledString: rgb[2].toUpperCase()})
+      pBuild.run(cmdsBase.PktType.NODE_LED_REQUEST, rgb[0], {ledString: rgb[2].toUpperCase()})
         .then(() => cmds.emit('standBy'));
 
     }, {noAck: true});
@@ -69,7 +69,11 @@ var devPreset = function () {
       id: 0,
       depth: 0,
       addr: addr,
-      dbId: null
+      dbId: null,
+      init: true,
+      ack: false,
+      ackTot: 0,
+      ackCnt: 0,
     },
     net: {
       set: false,
@@ -85,7 +89,8 @@ var devPreset = function () {
     },
     txP: {
       totalCnt: 0,
-      procCnt: 0
+      procCnt: 0,
+      send: false
     }
   };
 
@@ -93,12 +98,29 @@ var devPreset = function () {
   return query.addHub(addr);
 };
 
+var cfgLoad = function () {
+  app.dev.ack = false;
+  app.dev.ackTot = 0;
+  app.dev.ackCnt = 0;
+  app.rxP = {
+    headerCnt: 0,
+    dataCnt: 0,
+    totalCnt: 0,
+    procCnt: 0,
+  };
+  app.txP = {
+    totalCnt: 0,
+    procCnt: 0,
+    send: false
+  }
+};
+
 var onInit = function () {
-  cmds.log("on Init Mode");
+  cmds.log("Initializing");
   setTimeout(() => {
     if (noble.state === 'poweredOn' && bleno.state === 'poweredOn') {
       db.sql.sync()
-        .then(() => (env === "development" || !app.has('dev.addr')) ? devPreset() : '')
+        .then(() => (env === "development" || !(_.has(app, 'dev.addr'))) ? devPreset() : cfgLoad())
         .then(() => cmds.emit('standBy'));
     } else {
       cmds.error("Error Ready State");
@@ -109,26 +131,37 @@ var onInit = function () {
 
 // Sequence Choose
 var onStandBy = function () {
-  cmds.log("standBy Mode.");
-  // query.addAllPath(3);
+  cmds.log("=======StandBy=======");
   setTimeout(() => {
     if (!app.net.nodeCnt) {
       cmds.log("Network Not Constructed!");
       this.emit('cScan');
-    } else if (app.txP.procCnt > app.rxP.totalCnt) {
+    } else if (app.dev.init && !app.net.set && app.net.responseCnt === app.net.nodeCnt) {
+      app.dev.init = false;
+      netSet();
+    } else if (!app.dev.init && app.net.set && !app.dev.ack && !app.dev.ackTot) {
+      netChk();
+    } else if (app.txP.send && app.txP.procCnt > app.rxP.totalCnt) {
       cmds.log(app.txP.procCnt + "/" + app.rxP.totalCnt);
       cmds.log("Waiting for Packet to receive to be End");
       this.emit('pStandBy');
     } else if (app.txP.totalCnt > app.txP.procCnt) {
+      app.txP.send = true;
       cmds.log("Packet Send.");
       this.emit('cSend');
-    } else if (app.net.set === false && app.net.responseCnt === app.net.nodeCnt) {
-      netSet();
     } else {
-      cmds.log("Network : " + app.net.set + " Waiting for Accept!");
+      cmds.log("Network : " + app.net.set);
+      cmds.log("Waiting for Accept!");
       this.emit('pStandBy');
     }
   }, 1000);
+};
+
+
+var netChk = function () {
+  (!Object.keys(noble._peripherals).length) ? cmds.log("Ack Started. Re-Scan Depth 1.") : '';
+  cmds.on('netAck', () => query.ackNode(() => cmds.emit('standBy')));
+  (!Object.keys(noble._peripherals).length) ? cmds.emit('cScan') : cmds.emit('netAck');
 };
 
 var netSet = function () {
@@ -147,16 +180,17 @@ var onCScan = function () {
 };
 
 var findRoute = function (target) {
-  return query.getNode({nodeNo: target}).then(n1 =>
-    (app.net.disc[n1.addr]) ? app.net.disc[n1.addr] : query.getPath({nodeId: n1.id})
+  return query.getNode({nodeNo: target})
+    .then(n1 => (app.net.disc[n1.addr]) ? app.net.disc[n1.addr] : query.getPath({nodeId: n1.id})
       .then(res => query.getNode({nodeNo: res.path[0]}))
       .then(n2 => (app.net.disc[n2.addr]) ? app.net.disc[n2.addr] : reject("Error"))
-  )
+    )
 };
 
 var onCSend = function () {
-  var header = pUtil.pHeader(app.txP[app.txP.procCnt].header);
   cmds.log("Dispatching Packet");
+  var header = pUtil.pHeader(app.txP[app.txP.procCnt].header);
+
   return findRoute(header.tgt).then((node) => cen.cmdsConn(node)).catch(e => console.log(e));
 }; // TODO: For Error Logging when Failure Connection
 

@@ -30,6 +30,7 @@ var buildData = function (opt) {
   var buf = null;
   switch (opt.type) {
     case cmdsBase.PktType.SCAN_REQUEST:
+    case cmdsBase.PktType.NET_ACK_REQUEST:
       buf = Buffer.from(parseData(opt.nodeAddr, true));
       break;
 

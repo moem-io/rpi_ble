@@ -16,13 +16,35 @@ var addNode = function (nodeNo, parentNo, addr, rssi) {
   return getNode({nodeNo: parentNo})
     .then(p => retrieveNode({addr: addr, nodeNo: nodeNo, depth: p.depth + 1})
       .spread((c, newRow) => (!newRow) ? retrieveNetwork({parent: p.id, child: c.id, rssi: rssi}) :
-        pBuild.run(cmdsBase.BuildType.SCAN_REQUEST, c.nodeNo)
+        pBuild.run(cmdsBase.PktType.SCAN_REQUEST, c.nodeNo)
           .then(() => retrieveNetwork({parent: p.id, child: c.id, rssi: rssi}))))
     .spread((net) => updateNetwork({rssi: rssi, net: net.id}))
 };
 
+//TODO: callback to Object.Keys.map() => Promise.all
+var ackNode = function (callback) {
+  var proc = [];
+  return getAllNode().then(nodes => {
+    cmds.log("Acking Node, Total : " + (nodes.length - 1));
+    app.dev.ackTot = nodes.length;
+    return Promise.all(
+      Object.values(nodes).map(node => proc.push(pBuild.run(cmdsBase.PktType.NET_ACK_REQUEST, node.nodeNo)))
+    ).then(callback);
+  })
+};
+
+var ackResult = function () {
+  return getAllNode().then(nodes => nodes.forEach(
+    n => cmds.log(n.nodeNo, n.addr, n.depth, n.status, n.isActive)
+  ))
+};
+
 var getNode = function (opt) {
   return db.Nodes.findOne({where: {$or: [{nodeNo: opt.nodeNo}, {addr: opt.addr}]}, rejectOnEmpty: true});
+};
+
+var getAllNode = function () {
+  return db.Nodes.findAll();
 };
 
 var retrieveNode = function (opt) {
@@ -101,6 +123,7 @@ function getRandomColor() {
   return color;
 }
 
+//TODO: callback to Object.Keys.map() => Promise.all
 var extractPath = function (paths, G, callback) {
   var node = [{'name': '0_HUB', 'radius': '12', 'rgb': getRandomColor()}];
   var link = [];
@@ -172,7 +195,9 @@ module.exports.addHub = addHub;
 module.exports.addNode = addNode;
 
 module.exports.getNode = getNode;
+module.exports.getAllNode = getAllNode;
 module.exports.retrieveNode = retrieveNode;
+module.exports.ackNode = ackNode;
 
 module.exports.getAllNetwork = getAllNetwork;
 module.exports.retrieveNetwork = retrieveNetwork;
@@ -183,5 +208,6 @@ module.exports.addAllPath = addAllPath;
 module.exports.getPath = getPath;
 module.exports.getAllPath = getAllPath;
 module.exports.retrievePath = retrievePath;
+module.exports.ackResult = ackResult;
 
 module.exports.getAllApp = getAllApp;
