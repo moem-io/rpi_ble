@@ -9,13 +9,16 @@ var env = process.env.NODE_ENV || "development";
 var config = require(path.join(__dirname, '../../config.json'))[env];
 
 var sql = new SQL(config.database, config.username, config.password, config);
+var appSql = new SQL(config.app_database, config.username, config.password, config);
+
 var db = {};
+var appDb = {};
 
 function tableInit() {
   fs
     .readdirSync(__dirname)
     .filter(function (file) {
-      return (file.indexOf(".") !== 0) && (file !== "index.js");
+      return (file.indexOf(".") !== 0) && (file !== "index.js") && (file !== "04_apps.js");
     })
     .forEach(function (file) {
       var model = sql.import(path.join(__dirname, file));
@@ -45,11 +48,28 @@ function tableInit() {
   // available.
 }
 
-sql.sync({force: true}).then(() => tableInit());
+function appTableInit() {
+  fs
+    .readdirSync(__dirname)
+    .filter(function (file) {
+      return (file.indexOf(".") !== 0) && (file === "04_apps.js");
+    })
+    .forEach(function (file) {
+      var model = appSql.import(path.join(__dirname, file));
+      appDb[model.name] = model;
+    });
+}
+
+
+sql.sync({force: true})
+  .then(() => tableInit())
+  .then(() => appSql.sync({force: true})
+    .then(() => appTableInit()));
 
 // tableInit();
 
 db.sql = sql;
 db.SQL = SQL;
+db.app = appDb;
 
 module.exports = db;

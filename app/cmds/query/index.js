@@ -185,9 +185,9 @@ var retrievePath = function (opt) {
 //opt.*_node might be not Zero.
 var getAllApp = function (opt) {
   if (opt.in_node) {
-    return db.Apps.findAll({where: {in_node: opt.in_node, in_sensor: opt.in_sensor}})
+    return db.app.Apps.findAll({where: {in_node: opt.in_node, in_sensor: opt.in_sensor}})
   } else if (opt.out_node) {
-    return db.Apps.findAll({where: {out_node: opt.out_node, out_sensor: opt.out_sensor}})
+    return db.app.Apps.findAll({where: {out_node: opt.out_node, out_sensor: opt.out_sensor}})
   }
 };
 
