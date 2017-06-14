@@ -3,6 +3,7 @@ var pUtil = require('../../packet/util');
 var cmdsBase = require("../../cmds_base");
 
 function buildPacket(type, target, opt) {
+  // cmds.log("build "+target);
   if (target === app.dev.id) {
     cmds.log("Self Packet. Skipping");
     return Promise.resolve();

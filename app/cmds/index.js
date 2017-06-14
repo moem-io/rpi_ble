@@ -50,7 +50,7 @@ amqp.connect('amqp://node_rpi:node_rpi@localhost/nodeHost', function (err, conn)
       console.log(" [x] Received %s", msg.content.toString());
 
       var rgb = msg.content.toString().split(',');
-      //TODO: NODE Hard coded.
+
       pBuild.run(cmdsBase.PktType.NODE_LED_REQUEST, rgb[0], {ledString: rgb[2].toUpperCase()})
         .then(() => cmds.emit('standBy'));
 
@@ -132,6 +132,7 @@ var onInit = function () {
 // Sequence Choose
 var onStandBy = function () {
   cmds.log("=======StandBy=======");
+  // query.addAllPath(3);
   setTimeout(() => {
     if (!app.net.nodeCnt) {
       cmds.log("Network Not Constructed!");
@@ -142,8 +143,7 @@ var onStandBy = function () {
     } else if (!app.dev.init && app.net.set && !app.dev.ack && !app.dev.ackTot) {
       netChk();
     } else if (app.txP.send && app.txP.procCnt > app.rxP.totalCnt) {
-      cmds.log(app.txP.procCnt + "/" + app.rxP.totalCnt);
-      cmds.log("Waiting for Packet to receive to be End");
+      cmds.log(app.txP.procCnt + "/" + app.rxP.totalCnt + " Waiting Response Packet.");
       this.emit('pStandBy');
     } else if (app.txP.totalCnt > app.txP.procCnt) {
       app.txP.send = true;
@@ -160,7 +160,7 @@ var onStandBy = function () {
 
 var netChk = function () {
   (!Object.keys(noble._peripherals).length) ? cmds.log("Ack Started. Re-Scan Depth 1.") : '';
-  cmds.on('netAck', () => query.ackNode(() => cmds.emit('standBy')));
+  cmds.on('netAck', () => query.ackNode().then(() => cmds.emit('standBy')));
   (!Object.keys(noble._peripherals).length) ? cmds.emit('cScan') : cmds.emit('netAck');
 };
 

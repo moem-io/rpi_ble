@@ -3,6 +3,7 @@ var cmdsBase = require('../cmds_base');
 var pBuild = require('../packet/build');
 var jsnx = require('jsnetworkx');
 var request = require('request');
+var _ = require('lodash');
 
 var addHub = function (addr) {
   return retrieveNode({addr: addr, nodeNo: app.dev.id, depth: app.dev.depth})
@@ -22,14 +23,11 @@ var addNode = function (nodeNo, parentNo, addr, rssi) {
 };
 
 //TODO: callback to Object.Keys.map() => Promise.all
-var ackNode = function (callback) {
-  var proc = [];
+var ackNode = function () {
   return getAllNode().then(nodes => {
     cmds.log("Acking Node, Total : " + (nodes.length - 1));
     app.dev.ackTot = nodes.length;
-    return Promise.all(
-      Object.values(nodes).map(node => proc.push(pBuild.run(cmdsBase.PktType.NET_ACK_REQUEST, node.nodeNo)))
-    ).then(callback);
+    return Promise.all(Object.values(nodes).map(node => pBuild.run(cmdsBase.PktType.NET_ACK_REQUEST, node.nodeNo)))
   })
 };
 
@@ -74,12 +72,8 @@ var addPath = function (nodeNo, path) {
 var addAllPath = function (nodeCnt) {
   var G = new jsnx.Graph();
   var proc = [];
-  var pathGraph =
-    {
-      'node': [
-        {name: 'Hub_0', radius: '10', rgb: '#5f5f5f'}
-      ], 'link': []
-    };
+  var pathGraph = {'node': [], 'link': []};
+  pathGraph['node'].push({name: 'Hub_0', radius: '10', rgb: '#5f5f5f'});
 
   return getAllNetwork().then(net => net.forEach(
     conn => {
@@ -94,20 +88,15 @@ var addAllPath = function (nodeCnt) {
       res = res.join('-');
       proc.push(addPath(i, res));
     }
-    //[TODO] : PROMISE REJECT NON-ERROR
+    //[TODO] : PROMISE REJECT NON-ERROR , Maybe Fixed.
     return Promise.all(proc)
-      .then(() => getAllPath()
-        .then((paths) => extractPath(paths, G, sendData)))
+      .then(() => extractPath(G, sendData))
       .catch(e => console.log(e));
   });
 };
 
 var sendData = function (data) {
-  var opt = {
-    uri: process.env.API_HOST + process.env.NODE_ENDPOINT,
-    method: 'POST',
-    json: data
-  };
+  var opt = {uri: process.env.API_HOST + process.env.NODE_ENDPOINT, method: 'POST', json: data};
   // console.log(data);
   return request(opt, (e, res, body) => {
     (body == 'success') ? console.log(body + 1) : console.log(body);
@@ -123,45 +112,37 @@ function getRandomColor() {
   return color;
 }
 
-//TODO: callback to Object.Keys.map() => Promise.all
-var extractPath = function (paths, G, callback) {
+var extractPath = function (G, callback) {
   var node = [{'name': '0_HUB', 'radius': '12', 'rgb': getRandomColor()}];
   var link = [];
-  var extract = [];
+  var allPath = [];
 
-  paths.forEach(
-    (pathRow, idx, arr) => {
-      var pathTmp = [];
-
+  return getAllPath()
+    .then((paths) => Promise.all(Object.values(paths).map((pathRow) => {
       node = node.concat([{'name': pathRow.Node.nodeNo + '_Node', 'radius': '8', 'rgb': getRandomColor()}]);
 
-      (pathRow.path == '') ? '' : pathTmp = pathRow.path.split('-');
-      pathTmp.unshift(0);
-      pathTmp.push(pathRow.Node.nodeNo);
+      path = (pathRow.path === '') ? [] : pathRow.path.split('-');
+      path.unshift(0);
+      path.push(pathRow.Node.nodeNo);
+      path = path.map(Number);
 
-      pathTmp = pathTmp.map(Number);
-
-      while (pathTmp.length > 1) {
-        var c = pathTmp.pop();
-        var p = pathTmp.slice(-1)[0];
+      while (path.length > 1) {
+        var c = path.pop();
+        var p = path.slice(-1)[0];
         var addTmp = true;
 
-        //TODO: toString Compare -> needs to be Fixed!
-        for (var i = 0; i < extract.length; i++) {
-          if ((extract[i].slice(0, 2).toString() == [p, c].toString())) {
+        for (var i = 0; i < allPath.length; i++) {
+          if ((_.isEqual(allPath[i].slice(0, 2), [p, c]))) {
             addTmp = false;
             break;
           }
         }
 
         data = G.getEdgeData(p, c);
-        (addTmp) ? extract.push([p, c, data.weight]) : '';
+        (addTmp) ? allPath.push([p, c, data.weight]) : '';
         (addTmp) ? link = link.concat([{'source': p, 'target': c, 'length': (data.weight)}]) : '';
       }
-
-      (idx == arr.length - 1) ? callback({node: node, link: link}) : '';
-    }
-  );
+    })).then(callback({node: node, link: link})));
 };
 
 var getAllPath = function () {
