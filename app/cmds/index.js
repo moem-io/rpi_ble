@@ -74,6 +74,7 @@ var devPreset = function () {
       ack: false,
       ackTot: 0,
       ackCnt: 0,
+      sendReady: false, //ack Send In-Progress
     },
     net: {
       set: false,
@@ -102,6 +103,7 @@ var cfgLoad = function () {
   app.dev.ack = false;
   app.dev.ackTot = 0;
   app.dev.ackCnt = 0;
+  app.dev.sendReady = false;
   app.rxP = {
     headerCnt: 0,
     dataCnt: 0,
@@ -140,9 +142,11 @@ var onStandBy = function () {
     } else if (app.dev.init && !app.net.set && app.net.responseCnt === app.net.nodeCnt) {
       app.dev.init = false;
       netSet();
-    } else if (!app.dev.init && app.net.set && !app.dev.ack && !app.dev.ackTot) {
+    }
+    else if (!app.dev.init && app.net.set && !app.dev.ack && !app.dev.sendReady) {
       netChk();
-    } else if (app.txP.send && app.txP.procCnt > app.rxP.totalCnt) {
+    }
+    else if (app.txP.send && app.txP.procCnt > app.rxP.totalCnt) {
       cmds.log(app.txP.procCnt + "/" + app.rxP.totalCnt + " Waiting Response Packet.");
       this.emit('pStandBy');
     } else if (app.txP.totalCnt > app.txP.procCnt) {
@@ -160,7 +164,12 @@ var onStandBy = function () {
 
 var netChk = function () {
   (!Object.keys(noble._peripherals).length) ? cmds.log("Ack Started. Re-Scan Depth 1.") : '';
-  cmds.on('netAck', () => query.ackNode().then(() => cmds.emit('standBy')));
+  cmds.on('netAck', () => {
+    app.dev.sendReady = true;
+    cmds.emit('standBy')
+  });
+
+  // cmds.on('netAck', () => query.ackNode().then(() => cmds.emit('standBy')));
   (!Object.keys(noble._peripherals).length) ? cmds.emit('cScan') : cmds.emit('netAck');
 };
 
