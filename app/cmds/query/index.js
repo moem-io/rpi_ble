@@ -17,17 +17,21 @@ var addNode = function (nodeNo, parentNo, addr, rssi) {
   return getNode({nodeNo: parentNo})
     .then(p => retrieveNode({addr: addr, nodeNo: nodeNo, depth: p.depth + 1})
       .spread((c, newRow) => (!newRow) ? retrieveNetwork({parent: p.id, child: c.id, rssi: rssi}) :
-        pBuild.run(cmdsBase.PktType.SCAN_REQUEST, c.nodeNo)
+        pBuild.run(cmdsBase.PktType.SCAN_REQUEST, c.nodeNo, 0)
           .then(() => retrieveNetwork({parent: p.id, child: c.id, rssi: rssi}))))
     .spread((net) => updateNetwork({rssi: rssi, net: net.id}))
 };
 
-//TODO: callback to Object.Keys.map() => Promise.all
+var updateNode = function (opt) {
+  var attr = (opt.status !== null) ? {status: opt.status} : (opt.isActive !== null) ? {isActive: opt.isActive} : '';
+  return db.Nodes.update(attr, {where: {$or: [{nodeNo: opt.nodeNo}, {addr: opt.addr}]}});
+};
+
 var ackNode = function () {
   return getAllNode().then(nodes => {
     cmds.log("Acking Node, Total : " + (nodes.length - 1));
     app.dev.ackTot = nodes.length;
-    return Promise.all(Object.values(nodes).map(node => pBuild.run(cmdsBase.PktType.NET_ACK_REQUEST, node.nodeNo)))
+    return Promise.all(Object.values(nodes).map(node => pBuild.run(cmdsBase.PktType.NET_ACK_REQUEST, node.nodeNo, 0)))
   })
 };
 
@@ -50,8 +54,22 @@ var retrieveNode = function (opt) {
 };
 
 
-var getAllNetwork = function () {
-  return db.Networks.findAll({include: [{model: db.Nodes, as: 'Parent'}, {model: db.Nodes, as: 'Child'}]});
+var getNetworks = function (opt) { //gets isActive = 0,1 //not
+  var query = {$or: [{parent: opt.nodeId}, {child: opt.nodeId}]};
+  if (opt.isActive) {
+    query['isActive'] = 1
+  }
+  return db.Networks.findAll({
+    where: query,
+    include: [{model: db.Nodes, as: 'Parent'}, {model: db.Nodes, as: 'Child'}]
+  });
+};
+
+
+var getAllNetwork = function () { //gets isActive = 1
+  return db.Networks.findAll({
+    where: {isActive: 1}, include: [{model: db.Nodes, as: 'Parent'}, {model: db.Nodes, as: 'Child'}]
+  });
 };
 
 var retrieveNetwork = function (opt) {
@@ -99,7 +117,7 @@ var sendData = function (data) {
   var opt = {uri: process.env.API_HOST + process.env.NODE_ENDPOINT, method: 'POST', json: data};
   // console.log(data);
   return request(opt, (e, res, body) => {
-    (body == 'success') ? console.log(body + 1) : console.log(body);
+    (body == 'success') ? console.log("API Server Updated") : console.log(body);
   });
 };
 
@@ -132,7 +150,7 @@ var extractPath = function (G, callback) {
         var addTmp = true;
 
         for (var i = 0; i < allPath.length; i++) {
-          if ((_.isEqual(allPath[i].slice(0, 2), [p, c]))) {
+          if ((_.isEqual(allPath[i].slice(0, 2), [p, c])) || (_.isEqual(allPath[i].slice(0, 2), [c, p]))) {
             addTmp = false;
             break;
           }
@@ -145,10 +163,6 @@ var extractPath = function (G, callback) {
     })).then(callback({node: node, link: link})));
 };
 
-var getAllPath = function () {
-  return db.Paths.findAll({include: [{model: db.Nodes, as: 'Node'}]});
-};
-
 var getPath = function (opt) {
   if (opt.nodeId) {
     return db.Paths.findOne({where: {nodeId: opt.nodeId}});
@@ -158,6 +172,10 @@ var getPath = function (opt) {
   }
 };
 
+var getAllPath = function () {
+  return db.Paths.findAll({include: [{model: db.Nodes, as: 'Node'}]});
+};
+
 var retrievePath = function (opt) {
   return db.Paths.findOrCreate({where: {nodeId: opt.nodeId}, defaults: {path: opt.path}})
     .spread((path, newRow) => (!newRow) ? path.updateAttributes({path: opt.path}) : true);
@@ -165,21 +183,42 @@ var retrievePath = function (opt) {
 
 //opt.*_node might be not Zero.
 var getAllApp = function (opt) {
-  if (opt.in_node) {
-    return db.app.Apps.findAll({where: {in_node: opt.in_node, in_sensor: opt.in_sensor}})
-  } else if (opt.out_node) {
-    return db.app.Apps.findAll({where: {out_node: opt.out_node, out_sensor: opt.out_sensor}})
-  }
+  var qOpt = (opt.in_node) ? {in_node: opt.in_node, in_sensor: opt.in_sensor} :
+    (opt.out_node) ? {out_node: opt.out_node, out_sensor: opt.out_sensor} : '';
+
+  return db.app.Apps.findAll({where: qOpt})
+};
+
+var retrieveSnsr = function (opt) {
+  return db.Sensors.findOrCreate({where: {nodeId: opt.nodeId, sensorNo: opt.sensorNo}})
+};
+
+var getSnsr = function (opt) {
+  return db.Sensors.findOne({where: {sensorNo: opt.sensorNo}})
+};
+
+var getAllSnsr = function (opt) {
+  return db.Sensors.findAll()
+};
+
+var addSnsrData = function (opt) {
+  return db.SensorData.create({where: {nodeId: opt.nodeId, sensorNo: opt.sensorNo}});
+};
+
+var getSnsrData = function (opt) {
+  return db.SensorData.findOne({where: {sensorNo: opt.sensorNo}})
 };
 
 module.exports.addHub = addHub;
 module.exports.addNode = addNode;
 
 module.exports.getNode = getNode;
+module.exports.updateNode = updateNode;
 module.exports.getAllNode = getAllNode;
 module.exports.retrieveNode = retrieveNode;
 module.exports.ackNode = ackNode;
 
+module.exports.getNetworks = getNetworks;
 module.exports.getAllNetwork = getAllNetwork;
 module.exports.retrieveNetwork = retrieveNetwork;
 module.exports.updateNetwork = updateNetwork;
@@ -190,5 +229,12 @@ module.exports.getPath = getPath;
 module.exports.getAllPath = getAllPath;
 module.exports.retrievePath = retrievePath;
 module.exports.ackResult = ackResult;
+
+module.exports.retrieveSnsr = retrieveSnsr; //*
+module.exports.getAllSnsr = getAllSnsr; //*
+module.exports.getSnsr = getSnsr; //*
+
+module.exports.addSnsrData = addSnsrData; //*
+module.exports.getSnsrData = getSnsrData; //*
 
 module.exports.getAllApp = getAllApp;
