@@ -1,6 +1,6 @@
 var cmdsBase = require('../../cmds_base');
 
-var buildHeader = function (h) {
+var buildHeader = function (h, path = []) { //path Type must be Array
   var type = h.type;
 
   var errType = h.errType || cmdsBase.ErrType.SUCCESS;
@@ -11,7 +11,9 @@ var buildHeader = function (h) {
   var tgt = h.tgt;
   var tgtSnsr = h.tgtSnsr;
 
-  return Buffer.from([type, errType, idxTot, src, srcSnsr, tgt, tgtSnsr]);
+  var tmpPath = path.concat([tgt]).concat(new Array(cmdsBase.pathSize - (path.length + 1)).fill(0));
+
+  return Buffer.from([type, errType, idxTot, src, srcSnsr, tgt, tgtSnsr].concat(tmpPath));
 };
 
 var parseHeader = function (h) {
@@ -22,15 +24,17 @@ var parseHeader = function (h) {
     src: h.readUInt8(3),
     srcSnsr: h.readUInt8(4),
     tgt: h.readUInt8(5),
-    tgtSnsr: h.readUInt8(6)
+    tgtSnsr: h.readUInt8(6),
+    path: {0: h.readUInt8(7), 1: h.readUInt8(8), 2: h.readUInt8(9), 3: h.readUInt8(10), 4: h.readUInt8(11)}
   }
 };
 
-var buildData = function (opt) {
+var buildData = function (type, opt) {
   var buf = null;
-  switch (opt.type) {
+  switch (type) {
     case cmdsBase.PktType.SCAN_REQUEST:
     case cmdsBase.PktType.NET_ACK_REQUEST:
+    case cmdsBase.PktType.SCAN_TARGET:
       buf = Buffer.from(parseData(opt.nodeAddr, true));
       break;
 

@@ -44,17 +44,16 @@ function validateWrite(data, offset, callback, dataLength) {
 }
 
 CmdsHeaderChar.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
-  validateWrite(data, offset, callback, 7);
-  bleno.log("Header Added");
+  validateWrite(data, offset, callback, cmdsBase.headerSize);
   app.rxP[app.rxP.totalCnt] = {header: data, data: null};
+  bleno.log("Header : " + pUtil.pData(app.rxP[app.rxP.totalCnt].header, 0, true));
   app.rxP.headerCnt++;
 
   resultUpdate(cmdsBase.RsltType.HEADER);
 };
 
 CmdsData1Char.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
-  validateWrite(data, offset, callback, 20);
-  bleno.log("Data 1 Added");
+  validateWrite(data, offset, callback, cmdsBase.dataSize);
   app.rxP[app.rxP.totalCnt].data = data;
   bleno.log("Data 1 : " + pUtil.pData(app.rxP[app.rxP.totalCnt].data, 0, true));
   resultUpdate(cmdsBase.RsltType.DATA1, callback);
@@ -62,9 +61,8 @@ CmdsData1Char.prototype.onWriteRequest = function (data, offset, withoutResponse
 };
 
 CmdsData2Char.prototype.onWriteRequest = function (data, offset, withoutResponse, callback) {
-  validateWrite(data, offset, callback, 20);
-  bleno.log("Data 2 Added");
-  var tmp = new Uint8Array(app.rxP[app.rxP.totalCnt].data.length + 20);
+  validateWrite(data, offset, callback, cmdsBase.dataSize);
+  var tmp = new Uint8Array(app.rxP[app.rxP.totalCnt].data.length + cmdsBase.dataSize);
   tmp.set(app.rxP[app.rxP.totalCnt].data, 0);
   tmp.set(data, app.rxP[app.rxP.totalCnt].data.length);
 
@@ -89,7 +87,7 @@ bleno.on('interpretResult', () => {
 
 var dataCount = (cnt) => {
   var header = pUtil.pHeader(app.rxP[app.rxP.procCnt].header);
-  (header.idxTot === cnt) ? interpretEmit() : bleno.log("Data " + header.idxTot + " " + cnt);
+  (header.idxTot <= cnt) ? interpretEmit() : bleno.log("Data " + header.idxTot + " " + cnt);
 };
 
 var interpretEmit = () => {
