@@ -146,8 +146,9 @@ function dispatchQue(type, data, opt) { //Maybe Async.
       break;
     case cmdsBase.ErrType.TARGET_ERROR:
     case cmdsBase.ErrType.ROUTE_ERROR:
+      var msg = "네트워크에 에러가 발생하였습니다. 복구 중이니 잠시 후에 시도해 주세요.";
       proc.push(new Promise(resolve => {
-        q_stack.push({q_name: "log_q", q_msg: type + "," + opt.src + "," + opt.tgt});
+        q_stack.push({q_name: "log_q", q_msg: msg + type + "," + opt.src + "->" + opt.tgt});
         resolve(q_stack);
       }));
       break;
