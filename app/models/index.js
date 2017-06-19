@@ -35,6 +35,7 @@ function tableInit() {
   db.Networks.belongsTo(db.Nodes, {as: 'Parent', foreignKey: 'parent'});
   db.Networks.belongsTo(db.Nodes, {as: 'Child', foreignKey: 'child'});
   db.Paths.belongsTo(db.Nodes, {as: 'Node', foreignKey: 'nodeId'});
+  db.SensorData.belongsTo(db.Sensors, {as: 'Sensor', foreignKey: 'sensorId'});
 
   // 1:1 Relationship
   // belongsTo (a sub *source*, b main *target*) -> add FK to source. add method to Source
