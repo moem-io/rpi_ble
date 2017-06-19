@@ -4,8 +4,12 @@ const Data1Uuid = '00009002000000108000001122334455';
 const Data2Uuid = '00009003000000108000001122334455';
 const ResultUuid = '00009004000000108000001122334455';
 
-const scanTimeout = 5000;
+const scanTimeout = 1000;
 const disconnectTimeout = 100;
+
+const pathSize = 5;
+const headerSize = 7 + pathSize;
+const dataSize = 20;
 
 const PktType = {
   SCAN_REQUEST: 1,
@@ -28,7 +32,10 @@ const PktType = {
   NET_ACK_RESPONSE: 103,
 
   NET_JOIN_REQUEST: 104,
-  NET_JOIN_RESPONSE: 105
+  NET_JOIN_RESPONSE: 105,
+
+  SCAN_TARGET: 238,
+  SCAN_TARGET_RESPONSE: 239
 };
 
 const RsltType = {
@@ -43,7 +50,8 @@ const RsltType = {
 
 const ErrType = {
   SUCCESS: 0,
-  ACK_ERROR: 1
+  TARGET_ERROR: 240,
+  ROUTE_ERROR: 241
 };
 
 module.exports.BaseUuid = BaseUuid;
@@ -58,3 +66,7 @@ module.exports.disconnectTimeout = disconnectTimeout;
 module.exports.PktType = PktType;
 module.exports.RsltType = RsltType;
 module.exports.ErrType = ErrType;
+
+module.exports.pathSize = pathSize;
+module.exports.headerSize = headerSize;
+module.exports.dataSize = dataSize;
