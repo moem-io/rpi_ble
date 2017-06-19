@@ -38,26 +38,62 @@ var CmdsBle = function () {
 
 util.inherits(CmdsBle, events.EventEmitter);
 global.cmds = new CmdsBle();
-global.rabbitCh = null;
+global.rCh = null; //Rabbit-MQ Channel
+
+var chDataParse = function (data) {
+  var receive = data.split(',');
+  rCh.rQue.push(receive);
+  return receive;
+};
+
+var onConsume = function (q) {
+  rCh.consume(q, (msg) => {
+    console.log(" [%s] Received %s", q, msg.content.toString());
+
+    var data = chDataParse(msg.content.toString());
+    var opt = null;
+    var type = undefined;
+    switch (q) {
+      case 'led_q':
+      case 'node_q':
+        type = cmdsBase.PktType.NODE_LED_REQUEST;
+        opt = {ledString: data[2].toUpperCase()};
+        break;
+      case 'sensor_q': //temp or humi
+        type = cmdsBase.PktType.SENSOR_DATA_REQUEST;
+        opt = {type: data[3]};
+        break;
+    }
+
+    (type !== undefined) ? pBuild.run(type, data[0], data[1], opt).then(() => cmds.emit('standBy')) : '';
+  }, {noAck: true});
+};
 
 amqp.connect('amqp://node_rpi:node_rpi@localhost/nodeHost', function (err, conn) {
   conn.createChannel(function (err, ch) {
-    global.rabbitCh = ch;
-    rabbitCh.assertQueue('led_q', {durable: false});
-    rabbitCh.assertQueue('btn_q', {durable: false});
-    cmds.log("AMQP Listening", 'led_q');
-    rabbitCh.consume('led_q', (msg) => {
-      console.log(" [x] Received %s", msg.content.toString());
+    global.rCh = ch;
+    rCh.rQue = [];
 
-      var rgb = msg.content.toString().split(',');
+    var queList = ['led_q', 'node_q', 'sensor_q', 'log_q'];
+    queList.forEach(q => rCh.assertQueue(q, {durable: false}));
+    cmds.log("AMQP Listening");
+    queList.forEach(q => onConsume(q));
 
-      pBuild.run(cmdsBase.PktType.NODE_LED_REQUEST, rgb[0], {ledString: rgb[2].toUpperCase()})
-        .then(() => cmds.emit('standBy'));
-
-    }, {noAck: true});
     cmds.emit('init');
   });
 });
+
+//TODO: Maybe not good solution for Global function. Assign to Other object.
+global.getAppIdFromReq = function (node, snsr) {
+  var appId = -1;
+  for (var i = 0; i < rCh.rQue.length; i++) {
+    if (rCh.rQue[i][0] === node && rCh.rQue[i][1] === snsr) {
+      appId = rCh.rQue[i][2];
+      break;
+    }
+  }
+  return appId;
+};
 
 
 var devPreset = function () {
