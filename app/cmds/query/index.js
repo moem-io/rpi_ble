@@ -46,7 +46,7 @@ var getNode = function (opt) {
 };
 
 var getAllNode = function () {
-  return db.Nodes.findAll();
+  return db.Nodes.findAll({where: {isActive: 1}});
 };
 
 var retrieveNode = function (opt) {
@@ -191,7 +191,7 @@ var getPath = function (opt) {
 };
 
 var getAllPath = function () {
-  return db.Paths.findAll({include: [{model: db.Nodes, as: 'Node'}]});
+  return db.Paths.findAll({where: {isActive: 1}, include: [{model: db.Nodes, as: 'Node'}]});
 };
 
 var retrievePath = function (opt) {
