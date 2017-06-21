@@ -11,6 +11,7 @@ function interpretPacket() {
   var header = pUtil.pHeader(app.rxP[app.rxP.procCnt].header);
   var data = app.rxP[app.rxP.procCnt].data;
   var net = false;
+  var netUpdate = false;
   var proc = [];
   build = [];
   chkNodeNo = undefined;
@@ -56,15 +57,17 @@ function interpretPacket() {
         break;
 
       case cmdsBase.PktType.SCAN_TARGET_RESPONSE:
-        var addr = pUtil.pData(data.subarray(i * 7, (i + 1) * 7 - 1), true, true);
-        var rssi = promiseRssi(data[(i + 1) * 7 - 1]);
+        var addr = pUtil.pData(data.subarray(0, 6), true, true);
+        var rssi = promiseRssi(data[6]);
 
         proc.push(query.getNode({nodeNo: header.src})
           .then(src => query.getNode({addr: addr})
             .then((tgt) => {
               chkNodeNo = tgt.nodeNo;
+              netUpdate = true;
               return query.retrieveNetwork({parent: src.id, child: tgt.id})
-            }).then(net => net.updateAttributes((!rssi) ? {isActive: 0} : {rssi: rssi}))));
+                .then((net) => net[0].updateAttributes((!rssi) ? {isActive: 0} : {rssi: rssi}))
+            })));
         break;
 
       case cmdsBase.PktType.NET_ACK_RESPONSE:
@@ -83,8 +86,9 @@ function interpretPacket() {
   }
 
   return Promise.all(proc)
-    .then(() => (net) ? query.addAllPath(app.net.nodeCnt) : '') //Update Path status
+    .then(() => (net) ? query.addAllPath() : '') //Update Path status
     .then(() => (chkNodeNo) ? nodeInactive(chkNodeNo) : '') //check Node if it's Active or Not.
+    .then(() => (netUpdate) ? query.addAllPath() : '') //Update Path status
     .then(() => (build.length > 0) ? Promise.all(build) : '')
     .then(() => {
       app.txP.send = false;
@@ -94,10 +98,17 @@ function interpretPacket() {
 }
 
 function nodeInactive(errNode) {
-  return query.getNetworks({nodeNo: errNode, isActive: 1})
-    .then(res => (res.length === 0) ? query.getNode({nodeNo: errNode})
-      .then(node => node.updateAttributes({isActive: 0})) : '')
+  return query.getNode({nodeNo: errNode})
+    .then(node => query.getNetworks({nodeId: node.id, isActive: 1})
+      .then(res => {
+        return (res.length === 0) ? query.getNode({nodeNo: errNode})
+          .then(node => {
+            node.updateAttributes({isActive: 0});
+            return query.getPath({nodeId:node.id}).then(res => res.updateAttributes({isActive:0}));
+          }) : ''
+      }));
 }
+
 
 function errInterpret(header, data) {
   if (header.errType === cmdsBase.ErrType.SUCCESS)
