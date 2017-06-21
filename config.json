@@ -2,8 +2,6 @@
   "development": {
     "username" : "root",
     "password" : "blockbee",
-    "database" : "blockbee",
-    "app_database": "app_db",
     "host" : "localhost",
     "port" : 3306,
     "dialect" : "mysql",
@@ -17,8 +15,6 @@
   "production": {
     "username": "root",
     "password": "blockbee",
-    "database": "blockbee",
-    "app_database": "app_db",
     "host": "localhost",
     "port": 3306,
     "dialect": "mysql",

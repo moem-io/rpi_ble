@@ -8,20 +8,21 @@ global.Sql = SQL;
 var env = process.env.NODE_ENV || "development";
 var config = require(path.join(__dirname, '../../config.json'))[env];
 
-var sql = new SQL(config.database, config.username, config.password, config);
-var appSql = new SQL(config.app_database, config.username, config.password, config);
+var sql = new SQL('blockbee', config.username, config.password, config);
+var appSql = new SQL('app_db', config.username, config.password, config);
 
 var db = {};
 var appDb = {};
 
 function tableInit() {
+  var dir = __dirname + '/node_db';
   fs
-    .readdirSync(__dirname)
+    .readdirSync(dir)
     .filter(function (file) {
-      return (file.indexOf(".") !== 0) && (file !== "index.js") && (file !== "04_apps.js");
+      return (file.indexOf(".") !== 0);
     })
     .forEach(function (file) {
-      var model = sql.import(path.join(__dirname, file));
+      var model = sql.import(path.join(dir, file));
       db[model.name] = model;
     });
 
@@ -50,17 +51,17 @@ function tableInit() {
 }
 
 function appTableInit() {
+  var dir = __dirname + '/app_db';
   fs
-    .readdirSync(__dirname)
+    .readdirSync(dir)
     .filter(function (file) {
-      return (file.indexOf(".") !== 0) && (file === "04_apps.js");
+      return (file.indexOf(".") !== 0);
     })
     .forEach(function (file) {
-      var model = appSql.import(path.join(__dirname, file));
+      var model = appSql.import(path.join(dir, file));
       appDb[model.name] = model;
     });
 }
-
 
 sql.sync({force: true})
   .then(() => tableInit())
@@ -72,5 +73,6 @@ sql.sync({force: true})
 db.sql = sql;
 db.SQL = SQL;
 db.app = appDb;
+db.appSql = appSql;
 
 module.exports = db;
