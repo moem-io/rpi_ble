@@ -38,11 +38,11 @@ function interpretPacket() {
           cmds.log("End Node. None Found");
         break;
 
-      case cmdsBase.PktType.NODE_BUTTON_PRESSED:
+      case cmdsBase.PktType.NODE_BTN_PRESSED:
         proc.push(dispatchQue(header.type, 0, {in_node: header.src, in_sensor: header.srcSnsr}));
         break;
 
-      case cmdsBase.PktType.SENSOR_DATA_RESPONSE: //TODO: data must parse in here.
+      case cmdsBase.PktType.SNSR_DATA_RESPONSE: //TODO: data must parse in here.
         proc.push(dispatchQue(header.type, data, {in_node: header.src, in_sensor: header.srcSnsr}));
         break;
 
@@ -50,9 +50,9 @@ function interpretPacket() {
         cmds.log("LED ON!!");
         break;
 
-      case cmdsBase.PktType.SENSOR_STATE_ATTACH:
+      case cmdsBase.PktType.SNSR_STATE_ATTACH:
         break;
-      case cmdsBase.PktType.SENSOR_STATE_DETACH:
+      case cmdsBase.PktType.SNSR_STATE_DETACH:
         break;
 
       case cmdsBase.PktType.SCAN_TARGET_RESPONSE:
@@ -132,7 +132,7 @@ function dispatchQue(type, data, opt) { //Maybe Async.
   var q_stack = [];
 
   switch (type) {
-    case cmdsBase.PktType.NODE_BUTTON_PRESSED:
+    case cmdsBase.PktType.NODE_BTN_PRESSED:
       proc.push(query.getNode({nodeNo: opt.in_node})
         .then(n => query.getAllApp({in_node: n.id, in_sensor: opt.in_sensor})
           .then(apps => {
@@ -140,7 +140,7 @@ function dispatchQue(type, data, opt) { //Maybe Async.
             return q_stack;
           })));
       break;
-    case cmdsBase.PktType.SENSOR_DATA_RESPONSE:
+    case cmdsBase.PktType.SNSR_DATA_RESPONSE:
       var appId = getAppIdFromReq(opt.in_node, opt.in_sensor);
       q_stack.push({q_name: "app_" + appId, q_msg: appId + ',input,' + data});
       break;

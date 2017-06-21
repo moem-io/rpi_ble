@@ -60,7 +60,7 @@ var onConsume = function (q) {
         opt = {ledString: data[2].toUpperCase()};
         break;
       case 'sensor_q': //temp or humi
-        type = cmdsBase.PktType.SENSOR_DATA_REQUEST;
+        type = cmdsBase.PktType.SNSR_DATA_REQUEST;
         opt = {type: data[3]};
         break;
     }

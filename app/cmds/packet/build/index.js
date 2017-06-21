@@ -23,7 +23,7 @@ function buildPacket(type, target, targetSnsr, opt) {
 
     case cmdsBase.PktType.SCAN_TARGET://Maybe Promsise Problem Occur
       header = headerWithPath(type, target);
-      data = tgtAddrByNo(opt.scanTgt, type);
+      data = tgtAddrByNo(type, opt.scanTgt);
       break;
 
     case cmdsBase.PktType.NODE_LED_REQUEST:
@@ -31,7 +31,7 @@ function buildPacket(type, target, targetSnsr, opt) {
       data = pUtil.bData(type, {ledString: opt.ledString});
       break;
 
-    case cmdsBase.PktType.SENSOR_DATA_REQUEST:
+    case cmdsBase.PktType.SNSR_DATA_REQUEST:
       header = headerWithPath(type, target, targetSnsr);
       opt.type;
       break;
