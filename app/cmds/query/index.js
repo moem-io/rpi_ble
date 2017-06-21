@@ -99,13 +99,16 @@ var addAllPath = function (nodeCnt) {
       cmds.log(conn.Parent.nodeNo + " -> " + conn.Child.nodeNo + " RSSI : " + conn.rssi);
     }
   )).then(() => {
-    for (var i = 1; i <= nodeCnt; i++) {
-      var res = jsnx.bidirectionalShortestPath(G, 0, i, {weight: 'weight'});
+    jsnx.forEach(G, (n) => {
+      if (n === 0) {
+        return;
+      }
+      var res = jsnx.bidirectionalShortestPath(G, 0, n, {weight: 'weight'});
       res.shift();
       res.pop();
       res = res.join('-');
-      proc.push(addPath(i, res));
-    }
+      proc.push(addPath(n, res));
+    });
     //[TODO] : PROMISE REJECT NON-ERROR , Maybe Fixed.
     return Promise.all(proc)
       .then(() => extractPath(G, sendData))
@@ -117,7 +120,7 @@ var sendData = function (data) {
   var opt = {uri: process.env.API_HOST + process.env.NODE_ENDPOINT, method: 'POST', json: data};
   // console.log(data);
   return request(opt, (e, res, body) => {
-    (body == 'success') ? console.log("API Server Updated") : console.log(body);
+    (body === 'success') ? console.log("API Server Updated") : console.log(body);
   });
 };
 
@@ -158,9 +161,24 @@ var extractPath = function (G, callback) {
 
         data = G.getEdgeData(p, c);
         (addTmp) ? allPath.push([p, c, data.weight]) : '';
-        (addTmp) ? link = link.concat([{'source': p, 'target': c, 'length': (data.weight)}]) : '';
+        (addTmp) ? link = link.concat([{
+          'source': searchIdx(p, node),
+          'target': searchIdx(c, node),
+          'length': (data.weight)
+        }]) : '';
       }
     })).then(callback({node: node, link: link})));
+};
+
+var searchIdx = function (no, node) {
+  var idxVal = undefined;
+  node.forEach((n, idx) => {
+    var tmp = n.name.split('_');
+    if (_.isEqual(no,parseInt(tmp[0]))) {
+      idxVal = idx;
+    }
+  });
+  return idxVal;
 };
 
 var getPath = function (opt) {
