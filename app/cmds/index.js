@@ -158,8 +158,9 @@ var onInit = function () {
   setTimeout(() => {
     if (noble.state === 'poweredOn' && bleno.state === 'poweredOn') {
       db.sql.sync()
-        .then(() => (env === "development" || !(_.has(app, 'dev.addr'))) ? devPreset() : cfgLoad())
-        .then(() => cmds.emit('standBy'));
+        .then(() => db.appSql.sync()
+          .then(() => (env === "development" || !(_.has(app, 'dev.addr'))) ? devPreset() : cfgLoad())
+          .then(() => cmds.emit('standBy')));
     } else {
       cmds.error("Error Ready State");
       this.emit('init');
@@ -170,19 +171,17 @@ var onInit = function () {
 // Sequence Choose
 var onStandBy = function () {
   cmds.log("=======StandBy=======");
-  // query.addAllPath(3);
+  // query.addAllPath();
   setTimeout(() => {
     if (!app.net.nodeCnt) {
       cmds.log("Network Not Constructed!");
       this.emit('cScan');
-    } else if (app.dev.init && !app.net.set && app.net.responseCnt === app.net.nodeCnt) {
+    } else if (!app.net.set && app.net.responseCnt === app.net.nodeCnt) {
       app.dev.init = false;
       netSet();
-    }
-    else if (!app.dev.init && app.net.set && !app.dev.ack && !app.dev.sendReady) {
+    } else if (!app.dev.init && app.net.set && !app.dev.ack && !app.dev.sendReady) {
       netChk();
-    }
-    else if (app.txP.send && app.txP.procCnt > app.rxP.totalCnt) {
+    } else if (app.txP.send && app.txP.procCnt > app.rxP.totalCnt) {
       cmds.log(app.txP.procCnt + "/" + app.rxP.totalCnt + " Waiting Response Packet.");
       this.emit('pStandBy');
     } else if (app.txP.totalCnt > app.txP.procCnt) {
@@ -214,6 +213,7 @@ var netSet = function () {
 
   query.addAllPath(app.net.nodeCnt).then(() => {
     app.net.set = true;
+    cfgUpdate();
     cmds.log("Network All Set!");
     cmds.emit('standBy');
   });
