@@ -52,10 +52,11 @@ function interpretPacket() {
         break;
 
       case cmdsBase.PktType.SNSR_STATE_REQUEST:
-        var state = undefined;//////////////////////////////////////////
-        var msg = header.src + "번 노드의 " + header.srcSnsr + "번 센서가 " + (opt.state === "attach") ? "부착되었습니다." : "떨어졌습니다.";
+        var state = (data[0] !== 0) ? "부착되었습니다." : "떨어졌습니다.";
+        var snsr = sensorType(data[0]);
+        var msg = snsr + header.src + "번 노드의 " + header.srcSnsr + "번 센서가 " + state;
         build.push(query.addLogData(msg, header.src, header.srcSnsr));
-        build.push(promisePBuild(cmdsBase.PktType.SNSR_STATE_RESPONSE, header.src, 0)); ////////////Maybe Problem
+        build.push(promisePBuild(cmdsBase.PktType.SNSR_STATE_RESPONSE, header.src, 0));
         break;
 
       case cmdsBase.PktType.SCAN_TARGET_RESPONSE:
@@ -100,6 +101,39 @@ function interpretPacket() {
     );
 }
 
+function sensorType(state) {
+  var type = '';
+  switch (String.fromCharCode(state)) {
+    case 'B':
+      type = "[버튼]";
+      break;
+    case 'H':
+      type = "[사람인식]";
+      break;
+    case 'S':
+      type = "[소리]";
+      break;
+    case 'R':
+      type = "[LED]";
+      break;
+    case 'I':
+      type = "[IR]";
+      break;
+    case 'Z':
+      type = "[버저]";
+      break;
+    case 'T':
+      type = "[온습도]";
+      break;
+    case 'P':
+      type = "[압력]";
+      break;
+    case 'L':
+      type = "[조도]";
+      break;
+  }
+  return type;
+}
 function nodeInactive(errNode) {
   return query.getNode({nodeNo: errNode})
     .then(node => query.getNetworks({nodeId: node.id, isActive: 1})
@@ -170,12 +204,14 @@ function dispatchQue(type, data, opt) { //Maybe Async.
     case cmdsBase.PktType.SNSR_DATA_RESPONSE:////////////////////////////////////////////////////////////////
       var appId = getAppIdFromReq(opt.in_node, opt.in_sensor);
       q_stack.push({q_name: "app_" + appId, q_msg: appId + ',input,' + data});
+      return Promise.all([]);
       break;
 
     case cmdsBase.ErrType.TARGET_ERROR:
     case cmdsBase.ErrType.ROUTE_ERROR:
       var msg = "네트워크에 에러가 발생하였습니다. 복구 중이니 잠시 후에 시도해 주세요." + opt.src + "->" + opt.tgt + "노드";
       build.push(query.addLogData(msg));
+      return Promise.all([]);
       break;
   }
 }

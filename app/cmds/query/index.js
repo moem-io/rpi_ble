@@ -236,13 +236,11 @@ var getSnsrData = function (opt) {
 
 var addLogData = function (log, node = 1, sensor = 1) {
   return db.app.AppLog.create({
-    where: {
-      log_content: log,
-      app_id: 1,
-      node: node,
-      sensor: sensor,
-      created_date: moment().format('lll')
-    }
+    log_content: log,
+    app_id: 1,
+    node: node,
+    sensor: sensor,
+    created_date: moment().format('lll')
   })
 };
 

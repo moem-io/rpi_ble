@@ -75,7 +75,13 @@ var headerWithPath = function (type, tgt, tgtSnsr = 0) {
 
 var headerWithPath2 = function (type, tgt, tgtSnsr = 0) {
   return query.getPath({nodeNo: tgt})
-    .then(res => pUtil.bHeader({type: type, idxTot: 2, tgt: tgt, tgtSnsr: tgtSnsr}, res.path.split('-')));
+    .then(res => query.getAllNode()
+      .then(nodes => pUtil.bHeader({
+        type: type,
+        idxTot: Math.ceil((nodes.length - 1) * 7 / 20),
+        tgt: tgt,
+        tgtSnsr: tgtSnsr
+      }, res.path.split('-'))));
 };
 
 
