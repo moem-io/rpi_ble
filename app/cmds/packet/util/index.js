@@ -42,6 +42,10 @@ var buildData = function (type, opt) {
       buf = Buffer.from(opt.ledString);
       break;
 
+    case cmdsBase.PktType.NET_UPDATE_REQUEST:
+      buf = Buffer.from(opt.nodeData);
+      break;
+
     default:
       break;
   }

@@ -6,13 +6,14 @@ var bleno = require('bleno');
 
 var build = [];
 var chkNodeNo = undefined;
+var proc = [];
 
 function interpretPacket() {
   var header = pUtil.pHeader(app.rxP[app.rxP.procCnt].header);
   var data = app.rxP[app.rxP.procCnt].data;
   var net = false;
   var netUpdate = false;
-  var proc = [];
+  proc = [];
   build = [];
   chkNodeNo = undefined;
 
@@ -59,15 +60,9 @@ function interpretPacket() {
       case cmdsBase.PktType.SCAN_TARGET_RESPONSE:
         var addr = pUtil.pData(data.subarray(0, 6), true, true);
         var rssi = promiseRssi(data[6]);
+        netUpdate = true;
 
-        proc.push(query.getNode({nodeNo: header.src})
-          .then(src => query.getNode({addr: addr})
-            .then((tgt) => {
-              chkNodeNo = tgt.nodeNo;
-              netUpdate = true;
-              return query.retrieveNetwork({parent: src.id, child: tgt.id})
-                .then((net) => net[0].updateAttributes((!rssi) ? {isActive: 0} : {rssi: rssi}))
-            })));
+        proc.push(updateNetwork(header, addr, rssi));
         break;
 
       case cmdsBase.PktType.NET_ACK_RESPONSE:
@@ -88,13 +83,20 @@ function interpretPacket() {
   return Promise.all(proc)
     .then(() => (net) ? query.addAllPath() : '') //Update Path status
     .then(() => (chkNodeNo) ? nodeInactive(chkNodeNo) : '') //check Node if it's Active or Not.
-    .then(() => (netUpdate) ? query.addAllPath() : '') //Update Path status
-    .then(() => (build.length > 0) ? Promise.all(build) : '')
+    .then(() => query.addAllPath()) //Update Path status
     .then(() => {
-      app.txP.send = false;
-      app.rxP.procCnt++;
-      bleno.emit('interpretResult');
-    });
+        if (build.length > 0) {
+          return Promise.all(build).then(() => {
+            app.txP.send = false;
+            app.rxP.procCnt++;
+            bleno.emit('interpretResult');
+          });
+        }
+        app.txP.send = false;
+        app.rxP.procCnt++;
+        bleno.emit('interpretResult');
+      }
+    );
 }
 
 function nodeInactive(errNode) {
@@ -104,11 +106,10 @@ function nodeInactive(errNode) {
         return (res.length === 0) ? query.getNode({nodeNo: errNode})
           .then(node => {
             node.updateAttributes({isActive: 0});
-            return query.getPath({nodeId:node.id}).then(res => res.updateAttributes({isActive:0}));
+            return query.getPath({nodeId: node.id}).then(res => res.updateAttributes({isActive: 0}));
           }) : ''
       }));
 }
-
 
 function errInterpret(header, data) {
   if (header.errType === cmdsBase.ErrType.SUCCESS)
@@ -123,20 +124,31 @@ function errInterpret(header, data) {
         return dispatchQue(header.errType, 0, {src: src, tgt: tgt})
           .then(() => query.getNode({nodeNo: tgt}))
           .then((node) => query.getNetworks({nodeId: node.id}))
-          .then((nets) => nets.forEach(
-            net => {
-              if (net.Parent.nodeNo === src && net.Child.nodeNo === tgt) { //Maybe Promise sequence broke??
-                net.updateAttributes({isActive: 0}); //Update Network status => Path Update.
-              } else {
-                var tgtNode = (net.Parent.nodeNo === tgt) ? net.Child.nodeNo :
-                  (net.Child.nodeNo === tgt) ? net.Parent.nodeNo : '';
-                build.push(pBuild.run(cmdsBase.PktType.SCAN_TARGET, tgtNode, 0, {scanTgt: tgt}));
+          .then((nets) => {
+            var q = [];
+            nets.forEach(
+              net => { //Update Network status => Path Update. (Sequence must be F
+                if (net.Parent.nodeNo === src && net.Child.nodeNo === tgt) { //Maybe Promise sequence broke??
+                  q.push(query.updateNetworkById(net.id).then(() => query.addAllPath(false)));
+                } else {
+                  var tgtNode = (net.Parent.nodeNo === tgt) ? net.Child.nodeNo :
+                    (net.Child.nodeNo === tgt) ? net.Parent.nodeNo : '';
+                  build.push(promisePBuild(tgtNode, tgt));
+                }
               }
-            }));
+            );
+            return q;
+          });
         break;
     }
   }
 }
+
+var promisePBuild = function (tgtNode, tgt) {
+  return new Promise(resolve => {
+    setTimeout(() => resolve(pBuild.run(cmdsBase.PktType.SCAN_TARGET, tgtNode, 0, {scanTgt: tgt})), tgtNode * 1000)
+  })
+};
 
 function dispatchQue(type, data, opt) { //Maybe Async.
   var proc = [];
@@ -174,6 +186,15 @@ function promiseRssi(rssi) {
   return -(rssi);
 }
 
+function updateNetwork(header, addr, rssi) {
+  return query.getNode({nodeNo: header.src})
+    .then(src => query.getNode({addr: addr})
+      .then((tgt) => {
+        chkNodeNo = tgt.nodeNo;
+        return query.retrieveNetwork({parent: src.id, child: tgt.id})
+          .then((net) => net[0].updateAttributes((!rssi) ? {isActive: 0} : {rssi: rssi}))
+      }))
+}
 function onScanRes(addr, header, rssi) {
   return query.getNode({addr: addr})
     .catch(Sql.EmptyResultError, () => app.net.nodeCnt++)

@@ -114,6 +114,7 @@ var devPreset = function () {
     },
     net: {
       set: false,
+      updateId: false,
       responseCnt: 0,
       nodeCnt: 0,
       disc: {}
@@ -211,12 +212,26 @@ var netChk = function () {
 var netSet = function () {
   cmds.log("Network Scanning out of : " + app.net.responseCnt + "/" + app.net.nodeCnt);
 
-  query.addAllPath(app.net.nodeCnt).then(() => {
-    app.net.set = true;
-    cfgUpdate();
-    cmds.log("Network All Set!");
-    cmds.emit('standBy');
-  });
+  query.addAllPath()
+    .then(() => (!app.net.updateId) ? netIdUpdate() : '')
+    .then(() => {
+      app.net.set = true;
+      app.net.updateId = true;
+      cfgUpdate();
+      cmds.log("Network All Set!");
+      cmds.emit('standBy');
+    });
+};
+
+var netIdUpdate = function () {
+  return query.getAllNode().then(nodes => {
+    var nodeData = [];
+    nodes.forEach(node => {
+      if (node.nodeNo === app.dev.id) return;
+      nodeData.push(pBuild.run(cmdsBase.PktType.NET_UPDATE_REQUEST, node.nodeNo, 0));
+    });
+    return nodeData;
+  }).then((proc) => Promise.all(proc))
 };
 
 var onCScan = function () {

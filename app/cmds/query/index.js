@@ -52,7 +52,10 @@ var getAllNode = function () {
 var retrieveNode = function (opt) {
   return db.Nodes.findOrCreate({where: {addr: opt.addr}, defaults: {nodeNo: opt.nodeNo, depth: opt.depth}});
 };
-
+//TODO: Rename
+var updateNetworkById = function (id) {
+  return db.Networks.update({isActive: 0}, {where: {id: id}});
+}
 
 var getNetworks = function (opt) { //gets isActive = 0,1 //not
   var query = {$or: [{parent: opt.nodeId}, {child: opt.nodeId}]};
@@ -87,7 +90,7 @@ var addPath = function (nodeNo, path) {
   return getNode({nodeNo: nodeNo}).then((node) => retrievePath({nodeId: node.id, path: path}));
 };
 
-var addAllPath = function (nodeCnt) {
+var addAllPath = function (api = true) {
   var G = new jsnx.Graph();
   var proc = [];
   var pathGraph = {'node': [], 'link': []};
@@ -111,7 +114,7 @@ var addAllPath = function (nodeCnt) {
     });
     //[TODO] : PROMISE REJECT NON-ERROR , Maybe Fixed.
     return Promise.all(proc)
-      .then(() => extractPath(G, sendData))
+      .then(() => (api) ? extractPath(G, sendData) : '')
       .catch(e => console.log(e));
   });
 };
@@ -138,9 +141,11 @@ var extractPath = function (G, callback) {
   var link = [];
   var allPath = [];
 
-  return getAllPath()
-    .then((paths) => Promise.all(Object.values(paths).map((pathRow) => {
-      node = node.concat([{'name': pathRow.Node.nodeNo + '_Node', 'radius': '8', 'rgb': getRandomColor()}]);
+  return getAllPath().then((paths) => {
+    Object.values(paths).forEach((pRow => {
+      node = node.concat([{'name': pRow.Node.nodeNo + '_Node', 'radius': '8', 'rgb': getRandomColor()}]);
+    }));
+    return Promise.all(Object.values(paths).map((pathRow) => {
 
       path = (pathRow.path === '') ? [] : pathRow.path.split('-');
       path.unshift(0);
@@ -167,14 +172,15 @@ var extractPath = function (G, callback) {
           'length': (data.weight)
         }]) : '';
       }
-    })).then(callback({node: node, link: link})));
+    })).then(callback({node: node, link: link}))
+  });
 };
 
 var searchIdx = function (no, node) {
   var idxVal = undefined;
   node.forEach((n, idx) => {
     var tmp = n.name.split('_');
-    if (_.isEqual(no,parseInt(tmp[0]))) {
+    if (_.isEqual(no, parseInt(tmp[0]))) {
       idxVal = idx;
     }
   });
@@ -236,6 +242,7 @@ module.exports.getAllNode = getAllNode;
 module.exports.retrieveNode = retrieveNode;
 module.exports.ackNode = ackNode;
 
+module.exports.updateNetworkById = updateNetworkById;
 module.exports.getNetworks = getNetworks;
 module.exports.getAllNetwork = getAllNetwork;
 module.exports.retrieveNetwork = retrieveNetwork;
