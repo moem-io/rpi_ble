@@ -6,14 +6,13 @@ var bleno = require('bleno');
 
 var build = [];
 var chkNodeNo = undefined;
-var proc = [];
 
 function interpretPacket() {
   var header = pUtil.pHeader(app.rxP[app.rxP.procCnt].header);
   var data = app.rxP[app.rxP.procCnt].data;
   var net = false;
   var netUpdate = false;
-  proc = [];
+  var proc = [];
   build = [];
   chkNodeNo = undefined;
 
@@ -52,9 +51,11 @@ function interpretPacket() {
         cmds.log("LED ON!!");
         break;
 
-      case cmdsBase.PktType.SNSR_STATE_ATTACH:
-        break;
-      case cmdsBase.PktType.SNSR_STATE_DETACH:
+      case cmdsBase.PktType.SNSR_STATE_REQUEST:
+        var state = undefined;//////////////////////////////////////////
+        var msg = header.src + "번 노드의 " + header.srcSnsr + "번 센서가 " + (opt.state === "attach") ? "부착되었습니다." : "떨어졌습니다.";
+        build.push(query.addLogData(msg, header.src, header.srcSnsr));
+        build.push(promisePBuild(cmdsBase.PktType.SNSR_STATE_RESPONSE, header.src, 0)); ////////////Maybe Problem
         break;
 
       case cmdsBase.PktType.SCAN_TARGET_RESPONSE:
@@ -133,7 +134,7 @@ function errInterpret(header, data) {
                 } else {
                   var tgtNode = (net.Parent.nodeNo === tgt) ? net.Child.nodeNo :
                     (net.Child.nodeNo === tgt) ? net.Parent.nodeNo : '';
-                  build.push(promisePBuild(tgtNode, tgt));
+                  build.push(promisePBuild(cmdsBase.PktType.SCAN_TARGET, tgtNode, tgt));
                 }
               }
             );
@@ -144,9 +145,9 @@ function errInterpret(header, data) {
   }
 }
 
-var promisePBuild = function (tgtNode, tgt) {
+var promisePBuild = function (type, tgtNode, tgt) {
   return new Promise(resolve => {
-    setTimeout(() => resolve(pBuild.run(cmdsBase.PktType.SCAN_TARGET, tgtNode, 0, {scanTgt: tgt})), tgtNode * 1000)
+    setTimeout(() => resolve(pBuild.run(type, tgtNode, 0, {scanTgt: tgt})), tgtNode * 1000)
   })
 };
 
@@ -162,23 +163,21 @@ function dispatchQue(type, data, opt) { //Maybe Async.
             apps.forEach(app => q_stack.push({q_name: "app_" + app.app_id, q_msg: app.app_id + ',input,' + 1}));
             return q_stack;
           })));
+      return Promise.all(proc)
+        .then((res) => res[0].forEach(r => rCh.sendToQueue(r.q_name, Buffer.from(r.q_msg))));
       break;
-    case cmdsBase.PktType.SNSR_DATA_RESPONSE:
+
+    case cmdsBase.PktType.SNSR_DATA_RESPONSE:////////////////////////////////////////////////////////////////
       var appId = getAppIdFromReq(opt.in_node, opt.in_sensor);
       q_stack.push({q_name: "app_" + appId, q_msg: appId + ',input,' + data});
       break;
+
     case cmdsBase.ErrType.TARGET_ERROR:
     case cmdsBase.ErrType.ROUTE_ERROR:
-      var msg = "네트워크에 에러가 발생하였습니다. 복구 중이니 잠시 후에 시도해 주세요.";
-      proc.push(new Promise(resolve => {
-        q_stack.push({q_name: "log_q", q_msg: msg + type + "," + opt.src + "->" + opt.tgt});
-        resolve(q_stack);
-      }));
+      var msg = "네트워크에 에러가 발생하였습니다. 복구 중이니 잠시 후에 시도해 주세요." + opt.src + "->" + opt.tgt + "노드";
+      build.push(query.addLogData(msg));
       break;
   }
-
-  return Promise.all(proc)
-    .then((res) => res[0].forEach(r => rCh.sendToQueue(r.q_name, Buffer.from(r.q_msg))));
 }
 
 //For Promising Data values, while in async.

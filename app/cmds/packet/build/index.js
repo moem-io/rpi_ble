@@ -32,6 +32,11 @@ function buildPacket(type, target, targetSnsr, opt) {
       data = pUtil.bData(type, {ledString: opt.ledString});
       break;
 
+    case cmdsBase.PktType.SNSR_STATE_RESPONSE:
+      header = headerWithPath(type, target);
+      data = pUtil.bData(type, 0);
+      break;
+
     case cmdsBase.PktType.SNSR_DATA_REQUEST:
       header = headerWithPath(type, target, targetSnsr);
       break;

@@ -4,6 +4,7 @@ var pBuild = require('../packet/build');
 var jsnx = require('jsnetworkx');
 var request = require('request');
 var _ = require('lodash');
+var moment = require('moment');
 
 var addHub = function (addr) {
   return retrieveNode({addr: addr, nodeNo: app.dev.id, depth: app.dev.depth})
@@ -233,6 +234,18 @@ var getSnsrData = function (opt) {
   return db.SensorData.findOne({where: {sensorNo: opt.sensorNo}})
 };
 
+var addLogData = function (log, node = 1, sensor = 1) {
+  return db.app.AppLog.create({
+    where: {
+      log_content: log,
+      app_id: 1,
+      node: node,
+      sensor: sensor,
+      created_date: moment().format('lll')
+    }
+  })
+};
+
 module.exports.addHub = addHub;
 module.exports.addNode = addNode;
 
@@ -263,3 +276,4 @@ module.exports.addSnsrData = addSnsrData; //*
 module.exports.getSnsrData = getSnsrData; //*
 
 module.exports.getAllApp = getAllApp;
+module.exports.addLogData = addLogData;

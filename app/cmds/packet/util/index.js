@@ -46,6 +46,9 @@ var buildData = function (type, opt) {
       buf = Buffer.from(opt.nodeData);
       break;
 
+    case cmdsBase.PktType.SNSR_STATE_RESPONSE:
+      buf = Buffer.from(1);
+      break;
     default:
       break;
   }
