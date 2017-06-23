@@ -57,7 +57,7 @@ var onConsume = function (q) {
       case 'led_q':
       case 'node_q':
         type = cmdsBase.PktType.NODE_LED_REQUEST;
-        opt = {ledString: data[2].toUpperCase()};
+        opt = {ledString: data[3].toUpperCase()};
         break;
       case 'sensor_q': //temp or humi
         type = cmdsBase.PktType.SNSR_DATA_REQUEST;
