@@ -1,30 +1,29 @@
 var bleno = require('bleno');
 
-var CmdsService = require('./cmds-service');
+var CmdsService = require('./cmds_service');
 
 var name = 'MxHUB';
 var cmdsService = new CmdsService();
 
-bleno.on('advertisingStart', () => bleno.setServices([cmdsService]));
-bleno.on('advertisingStartError', () => cmdsStartAdvertise());
-
-bleno.on('servicesSet', () => bleno.log('SVC set. Advertising'));
-bleno.on('servicesSetError', () => cmdsStartAdvertise());
-
-bleno.on('accept', () => {
-  bleno.stopAdvertising();
-  bleno.log("Central Connected, Stop Advertising.");
+bleno.on('advertisingStart', (err) => {
+  bleno.log('advertisingStart: ' + (err ? err : 'success'));
+  (!err) ? bleno.setServices([cmdsService], (e) => bleno.log('setServices: ' + (e ? e : 'success')))  : '';
 });
 
 bleno.on('disconnect', () => {
+  cmds.emit('pStandBy');
   bleno.log('Central Disconnected. Re-advertising');
-  cmdsStartAdvertise();
 });
 
+bleno.on('accept', () => {
+  if (!cmds.cConn()) {
+    bleno.stopAdvertising();
+    bleno.log("Central Connected, Stop Advertising.");
+  }
+});
 
 function cmdsStartAdvertise() {
-  bleno.startAdvertising(name, [cmdsService.uuid]);
-  bleno.log("Start Advertising");
+  bleno.startAdvertising(name, []);
 }
 
 module.exports.startAdvertise = cmdsStartAdvertise;

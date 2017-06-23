@@ -2,11 +2,28 @@
   "development": {
     "username" : "root",
     "password" : "blockbee",
-    "database" : "blockbee",
     "host" : "localhost",
     "port" : 3306,
     "dialect" : "mysql",
-    "pool" : { "max": 5, "min": 0, "idle" : 10000 }
+    "pool": {
+      "max": 5,
+      "min": 0,
+      "idle": 10000
+    },
+    "logging": false
+  },
+  "production": {
+    "username": "root",
+    "password": "blockbee",
+    "host": "localhost",
+    "port": 3306,
+    "dialect": "mysql",
+    "pool": {
+      "max": 5,
+      "min": 0,
+      "idle": 10000
+    },
+    "logging": false
   }
 }
 

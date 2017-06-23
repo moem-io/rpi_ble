@@ -16,7 +16,8 @@ module.exports = function (sql, SQL) {
     nodeNo: {
       type: SQL.INTEGER(3).UNSIGNED,
       allowNull: false,
-      defaultValue: 0
+      defaultValue: 0,
+      unique: true
     },
     addr: {
       type: SQL.STRING(12),

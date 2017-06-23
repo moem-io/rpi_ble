@@ -3,149 +3,285 @@
 var util = require('util');
 var events = require('events');
 var db = require("../models");
+var env = process.env.NODE_ENV || "development";
 
 var noble = require('noble');
 var bleno = require('bleno');
+noble.log = (str) => console.log("[C] " + str);
+bleno.log = (str) => console.log("[P] " + str);
 
-var cmdsC = require('./central');
-var cmdsP = require('./peripheral');
+var cen = require('./central');
+var per = require('./peripheral');
 
 var pInterpret = require('./packet/interpret');
 var pUtil = require('./packet/util');
+var pBuild = require('./packet/build');
 
 var query = require('./query');
+var amqp = require('amqplib/callback_api');
+var _ = require('lodash');
+
+var cmdsBase = require('./cmds_base');
 
 var CmdsBle = function () {
   this.log = (str) => console.log("[APP] " + str);
   this.error = (str) => console.error("[APP] " + str);
+  this.cConn = () => {
+    var res = false;
+    Object.keys(noble._peripherals).forEach(
+      k => (res || noble._peripherals[k].state === 'connected') ? res = true : ''
+    );
+    return res;
+  };
   events.EventEmitter.call(this);
 };
 
 util.inherits(CmdsBle, events.EventEmitter);
-var cmdsBle = new CmdsBle();
+global.cmds = new CmdsBle();
+global.rCh = null; //Rabbit-MQ Channel
 
-global.app = null;
-
-var onInit = function () {
-  cmdsBle.log("on Init Mode");
-  setTimeout(() => {
-    db.sql.sync().then(() => {
-      if (noble.state === 'poweredOn' && bleno.state === 'poweredOn') {
-        cmdsBle.log("Ready State");
-        this.emit('standBy');
-      } else {
-        cmdsBle.error("Error Ready State");
-        this.emit('init');
-      }
-    });
-  }, 100);
+var chDataParse = function (data) {
+  var receive = data.split(',');
+  rCh.rQue.push(receive);
+  return receive;
 };
 
-function devicePreset() {
+var onConsume = function (q) {
+  rCh.consume(q, (msg) => {
+    console.log(" [%s] Received %s", q, msg.content.toString());
+
+    var data = chDataParse(msg.content.toString());
+    var opt = null;
+    var type = undefined;
+    switch (q) {
+      case 'led_q':
+      case 'node_q':
+        type = cmdsBase.PktType.NODE_LED_REQUEST;
+        opt = {ledString: data[3].toUpperCase()};
+        break;
+      case 'sensor_q': //temp or humi
+        type = cmdsBase.PktType.SNSR_DATA_REQUEST;
+        opt = {type: data[3]};
+        break;
+    }
+
+    (type !== undefined) ? pBuild.run(type, data[0], data[1], opt).then(() => cmds.emit('standBy')) : '';
+  }, {noAck: true});
+};
+
+amqp.connect('amqp://node_rpi:node_rpi@localhost/nodeHost', function (err, conn) {
+  conn.createChannel(function (err, ch) {
+    global.rCh = ch;
+    rCh.rQue = [];
+
+    var queList = ['led_q', 'node_q', 'sensor_q', 'log_q'];
+    queList.forEach(q => rCh.assertQueue(q, {durable: false}));
+    cmds.log("AMQP Listening");
+    queList.forEach(q => onConsume(q));
+
+    cmds.emit('init');
+  });
+});
+
+//TODO: Maybe not good solution for Global function. Assign to Other object.
+global.getAppIdFromReq = function (node, snsr) {
+  var appId = -1;
+  for (var i = 0; i < rCh.rQue.length; i++) {
+    if (rCh.rQue[i][0] === node && rCh.rQue[i][1] === snsr) {
+      appId = rCh.rQue[i][2];
+      break;
+    }
+  }
+  return appId;
+};
+
+
+var devPreset = function () {
+  (env === "development") ? cmds.log("Develop ENV : Re-setting") : '';
   var addr = noble.address.replace(/:/g, '');
-  cmdsBle.log("My ADDR : " + addr);
+  cmds.log("My ADDR : " + addr);
   global.app = {
     dev: {
       id: 0,
       depth: 0,
       addr: addr,
-      dbId: null
+      dbId: null,
+      init: true,
+      ack: false,
+      ackTot: 0,
+      ackCnt: 0,
+      sendReady: false, //ack Send In-Progress
     },
     net: {
-      nodeCount: 0,
+      set: false,
+      updateId: false,
+      responseCnt: 0,
+      nodeCnt: 0,
       disc: {}
     },
     rxP: {
-      headerCount: 0,
-      dataCount: 0,
-      totalCount: 0,
-      processCount: 0,
+      headerCnt: 0,
+      dataCnt: 0,
+      totalCnt: 0,
+      procCnt: 0,
     },
     txP: {
-      totalCount: 0,
-      processCount: 0
+      totalCnt: 0,
+      procCnt: 0,
+      send: false
     }
   };
 
+  cfgUpdate(); //State Sync
   return query.addHub(addr);
-}
+};
 
+var cfgLoad = function () {
+  app.dev.ack = false;
+  app.dev.ackTot = 0;
+  app.dev.ackCnt = 0;
+  app.dev.sendReady = false;
+  app.rxP = {
+    headerCnt: 0,
+    dataCnt: 0,
+    totalCnt: 0,
+    procCnt: 0,
+  };
+  app.txP = {
+    totalCnt: 0,
+    procCnt: 0,
+    send: false
+  }
+};
+
+var onInit = function () {
+  cmds.log("Initializing");
+  setTimeout(() => {
+    if (noble.state === 'poweredOn' && bleno.state === 'poweredOn') {
+      db.sql.sync()
+        .then(() => db.appSql.sync()
+          .then(() => (env === "development" || !(_.has(app, 'dev.addr'))) ? devPreset() : cfgLoad())
+          .then(() => cmds.emit('standBy')));
+    } else {
+      cmds.error("Error Ready State");
+      this.emit('init');
+    }
+  }, 500);
+};
+
+// Sequence Choose
 var onStandBy = function () {
-  db.sql.sync().then(() => (!app) ? devicePreset() : '')
+  cmds.log("=======StandBy=======");
+  // query.addAllPath();
+  setTimeout(() => {
+    if (!app.net.nodeCnt) {
+      cmds.log("Network Not Constructed!");
+      this.emit('cScan');
+    } else if (!app.net.set && app.net.responseCnt === app.net.nodeCnt) {
+      app.dev.init = false;
+      netSet();
+    } else if (!app.dev.init && app.net.set && !app.dev.ack && !app.dev.sendReady) {
+      netChk();
+    } else if (app.txP.send && app.txP.procCnt > app.rxP.totalCnt) {
+      cmds.log(app.txP.procCnt + "/" + app.rxP.totalCnt + " Waiting Response Packet.");
+      this.emit('pStandBy');
+    } else if (app.txP.totalCnt > app.txP.procCnt) {
+      app.txP.send = true;
+      cmds.log("Packet Send.");
+      this.emit('cSend');
+    } else {
+      cmds.log("Network : " + app.net.set);
+      cmds.log("Waiting for Accept!");
+      this.emit('pStandBy');
+    }
+  }, 1000);
+};
+
+
+var netChk = function () {
+  (!Object.keys(noble._peripherals).length) ? cmds.log("Ack Started. Re-Scan Depth 1.") : '';
+  cmds.on('netAck', () => {
+    app.dev.sendReady = true;
+    cmds.emit('standBy')
+  });
+
+  // cmds.on('netAck', () => query.ackNode().then(() => cmds.emit('standBy')));
+  (!Object.keys(noble._peripherals).length) ? cmds.emit('cScan') : cmds.emit('netAck');
+};
+
+var netSet = function () {
+  cmds.log("Network Scanning out of : " + app.net.responseCnt + "/" + app.net.nodeCnt);
+
+  query.addAllPath()
+    .then(() => (!app.net.updateId) ? netIdUpdate() : '')
     .then(() => {
-      // this.emit('pStandBy');
-      if (!app.dev.nodeCount)
-        this.emit('cScan');
-      else if (app.txP.totalCount > app.txP.processCount)
-        this.emit('cSendPacket');
-      else
-        this.emit('cStandBy');
+      app.net.set = true;
+      app.net.updateId = true;
+      cfgUpdate();
+      cmds.log("Network All Set!");
+      cmds.emit('standBy');
     });
 };
 
-var onPStandBy = function () {
-  cmdsP.startAdvertise();
-  bleno.log('Peripheral Start Advertising');
+var netIdUpdate = function () {
+  return query.getAllNode().then(nodes => {
+    var nodeData = [];
+    nodes.forEach(node => {
+      if (node.nodeNo === app.dev.id) return;
+      nodeData.push(pBuild.run(cmdsBase.PktType.NET_UPDATE_REQUEST, node.nodeNo, 0));
+    });
+    return nodeData;
+  }).then((proc) => Promise.all(proc))
 };
 
 var onCScan = function () {
-  cmdsC.startScan();
-  noble.log('Central Start scanning network');
+  cen.startScan();
+  cmds.log('Central Start scanning network');
 };
 
 var findRoute = function (target) {
   return query.getNode({nodeNo: target})
-    .then(node => (node.get('addr') in app.net.disc) ? app.net.disc[node.get('addr')] : reject("Not Found"))
+    .then(n1 => (app.net.disc[n1.addr]) ? app.net.disc[n1.addr] : query.getPath({nodeId: n1.id})
+      .then(res => query.getNode({nodeNo: res.path[0]}))
+      .then(n2 => (app.net.disc[n2.addr]) ? app.net.disc[n2.addr] : reject("Error"))
+    )
 };
 
 var onCSend = function () {
-  var header = pUtil.pHeader(app.txP[app.txP.processCount].header);
-  cmdsBle.log("Dispatching Packet");
-  return findRoute(header.tgt).then((node) => cmdsC.cmdsConn(node));
+  cmds.log("Dispatching Packet");
+  var header = pUtil.pHeader(app.txP[app.txP.procCnt].header);
+
+  return findRoute(header.tgt).then((node) => cen.cmdsConn(node)).catch(e => console.log(e));
+}; // TODO: For Error Logging when Failure Connection
+
+var onCSendDone = function () {
+  cfgUpdate(); //State Sync
+  cmds.emit('standBy');
 };
 
-var oncStandBy = function () {
-  noble.stopScanning();
-  console.log('Central Stop Scanning');
+var onPStandBy = function () {
+  per.startAdvertise();
+  cmds.log('Peripheral Start Advertising');
 };
 
-var onSendReady = function () {
-  cmdsBle.emit('cSend');
-};
-
-var onSendDone = function () {
-  (app.txP.totalCount > app.txP.processCount) ? noble.emit('sendReady') : cmdsBle.emit('pStandBy');
-  //TODO : if more or wait for receive and send, fix this.
-};
-
-var onInterpretReady = function () {
+var onInterpret = function () {
+  cmds.log('Start Interpreting');
   pInterpret.run();
 };
 
 var onInterpretDone = function () {
-  if (app.rxP.totalCount >= app.rxP.processCount) {
-    bleno.emit('interpretReady');
-    cmdsBle.log('Start Interpreting');
-  }
+  cfgUpdate(); //State Sync
+  cmds.emit('standBy');
 };
 
-noble.log = (str) => console.log("[C] " + str);
-bleno.log = (str) => console.log("[P] " + str);
+cmds.on('init', onInit);
+cmds.on('standBy', onStandBy);
 
-cmdsBle.on('init', onInit);
-cmdsBle.on('standBy', onStandBy);
+cmds.on('cScan', onCScan);
+cmds.on('cSend', onCSend);
+cmds.on('cSendDone', onCSendDone);
 
-cmdsBle.on('pStandBy', onPStandBy);
-cmdsBle.on('cScan', onCScan);
+cmds.on('pStandBy', onPStandBy);
 
-cmdsBle.on('cSend', onCSend);
-
-cmdsBle.on('cStandBy', oncStandBy);
-
-noble.on('sendReady', onSendReady);
-noble.on('sendDone', onSendDone);
-
-bleno.on('interpretReady', onInterpretReady);
-bleno.on('interpretDone', onInterpretDone);
-
-cmdsBle.emit('init');
+cmds.on('interpret', onInterpret);
+cmds.on('interpretDone', onInterpretDone);

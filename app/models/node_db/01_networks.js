@@ -10,12 +10,10 @@ module.exports = function (sql, SQL) {
     },
     parent: {
       type: SQL.INTEGER.UNSIGNED,
-      references: {model: sql.models.Nodes, key: "id"},
       allowNull: false
     },
     child: {
       type: SQL.INTEGER.UNSIGNED,
-      references: {model: sql.models.Nodes, key: "id"},
       allowNull: false
     },
     rssi: {

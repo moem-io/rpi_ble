@@ -1,47 +1,75 @@
-const BaseUuid = '0000A00000000010800000AABBCCDDEE';
-const HeaderUuid = '0000A00100000010800000AABBCCDDEE';
-const DataUuid = '0000A00200000010800000AABBCCDDEE';
-const ResultUuid = '0000A00300000010800000AABBCCDDEE';
+const BaseUuid = '00009000000000108000001122334455';
+const HeaderUuid = '00009001000000108000001122334455';
+const Data1Uuid = '00009002000000108000001122334455';
+const Data2Uuid = '00009003000000108000001122334455';
+const ResultUuid = '00009004000000108000001122334455';
 
-const scanTimeout = 5000;
+const scanTimeout = 1000;
+const disconnectTimeout = 100;
 
-const PacketType = {
+const pathSize = 5;
+const headerSize = 7 + pathSize;
+const dataSize = 20;
+
+const PktType = {
   SCAN_REQUEST: 1,
   SCAN_RESPONSE: 2,
-  SENSOR_STATE_ATTACH: 3,
-  SENSOR_STATE_DETACH: 4,
-  SENSOR_DATA_REQUEST: 5,
-  SENSOR_DATA_RESPONSE: 6,
+  SNSR_STATE_REQUEST: 3, //
+  SNSR_STATE_RESPONSE: 4, //
+  SNSR_DATA_REQUEST: 5, //
+  SNSR_DATA_RESPONSE: 6, //
+  SNSR_ACTIVITY_REQUEST: 7, //
+  SNSR_ACTIVITY_RESPONSE: 8, //
+  SNSR_CMD_REQUEST: 9, //
+  SNSR_CMD_RESPONSE: 10, //
 
-  NETWORK_ACK_REQUEST: 100,
-  NETWORK_ACK_RESPONSE: 101,
+  NODE_STATUS_REQUEST: 17, //
+  NODE_STATUS_RESPONSE: 18, //
+  NODE_LED_REQUEST: 19,
+  NODE_LED_RESPONSE: 20,
+  NODE_BTN_PRESSED: 21,
+  NODE_BTN_PRESSED_RESPONSE: 22,
 
-  NETWORK_JOIN_REQUEST: 102,
-  NETWORK_JOIN_RESPONSE: 103
+  NET_UPDATE_REQUEST: 101, //
+  NET_UPDATE_REQUEST_RESPONSE: 102,//
+  NET_ACK_REQUEST: 103, //
+  NET_ACK_RESPONSE: 104, //
+  NET_JOIN_REQUEST: 105, //
+  NET_JOIN_RESPONSE: 106, //
+
+  SCAN_TARGET: 238,
+  SCAN_TARGET_RESPONSE: 239
 };
 
-const BuildType = {
-  SCAN_REQUEST: 1,
-  SCAN_RESPONSE: 2,
-  PACKET_ROUTE: 3
+const ErrType = {
+  SUCCESS: 0,
+  TARGET_ERROR: 240,
+  ROUTE_ERROR: 241
 };
 
-const ResultType = {
+const RsltType = {
   IDLE: 0,
   HEADER: 1,
-  DATA: 2,
-  INTERPRET: 3,
-  INTERPRET_ERROR: 4,
+  DATA1: 2,
+  DATA2: 3,
+  INTERPRET: 4,
+  INTERPRET_ERROR: 5,
   ERROR: 255
 };
 
 module.exports.BaseUuid = BaseUuid;
 module.exports.HeaderUuid = HeaderUuid;
-module.exports.DataUuid = DataUuid;
+module.exports.Data1Uuid = Data1Uuid;
+module.exports.Data2Uuid = Data2Uuid;
 module.exports.ResultUuid = ResultUuid;
 
 module.exports.scanTimeout = scanTimeout;
+module.exports.disconnectTimeout = disconnectTimeout;
 
-module.exports.PacketType = PacketType;
-module.exports.BuildType = BuildType;
-module.exports.ResultType = ResultType;
+module.exports.PktType = PktType;
+module.exports.RsltType = RsltType;
+module.exports.ErrType = ErrType;
+
+module.exports.pathSize = pathSize;
+module.exports.headerSize = headerSize;
+module.exports.dataSize = dataSize;
