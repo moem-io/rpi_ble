@@ -22,6 +22,7 @@ var amqp = require('amqplib/callback_api');
 var _ = require('lodash');
 
 var cmdsBase = require('./cmds_base');
+var network = require('./network');
 
 var CmdsBle = function () {
   this.log = (str) => console.log("[APP] " + str);
@@ -172,7 +173,7 @@ var onInit = function () {
 // Sequence Choose
 var onStandBy = function () {
   cmds.log("=======StandBy=======");
-  // query.addAllPath();
+  // network.calcPath();
   setTimeout(() => {
     if (!app.net.nodeCnt) {
       cmds.log("Network Not Constructed!");
@@ -212,7 +213,7 @@ var netChk = function () {
 var netSet = function () {
   cmds.log("Network Scanning out of : " + app.net.responseCnt + "/" + app.net.nodeCnt);
 
-  query.addAllPath()
+  network.calcPath()
     .then(() => (!app.net.updateId) ? netIdUpdate() : '')
     .then(() => {
       app.net.set = true;
