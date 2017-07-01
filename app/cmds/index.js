@@ -242,7 +242,7 @@ var findRoute = function (target) {
 
 var onCSend = function () {
   cmds.log("Dispatching Packet");
-  var header = pUtil.pHeader(app.txP[app.txP.procCnt].header);
+  var header = pUtil.pHeader(app.txP[app.txP.procCnt].header); //TODO: Error with not resetting-DB.
 
   return findRoute(header.tgt).then((node) => cen.cmdsConn(node)).catch(e => console.log(e));
 }; // TODO: For Error Logging when Failure Connection
