@@ -1,6 +1,7 @@
 var jsnx = require('jsnetworkx');
 var query = require('../query');
 var _ = require('lodash');
+var request = require('request');
 
 var calcPath = function (api = true) {
   var G = new jsnx.Graph();
@@ -22,7 +23,7 @@ var calcPath = function (api = true) {
       res.shift();
       res.pop();
       res = res.join('-');
-      proc.push(addPath(n, res));
+      proc.push(query.addPath(n, res));
     });
     //[TODO] : PROMISE REJECT NON-ERROR , Maybe Fixed.
     return Promise.all(proc)

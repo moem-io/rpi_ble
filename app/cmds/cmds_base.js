@@ -57,6 +57,11 @@ const RsltType = {
   ERROR: 255
 };
 
+const sensorType = {
+  'B': "[버튼]", 'H': "[사람인식]", 'S': "[소리]", 'R': "[LED]", 'I': "[IR]",
+  'Z': "[버저]", 'T': "[온습도]", 'P': "[압력]", 'L': "[조도]"
+};
+
 module.exports.BaseUuid = BaseUuid;
 module.exports.HeaderUuid = HeaderUuid;
 module.exports.Data1Uuid = Data1Uuid;
@@ -69,6 +74,7 @@ module.exports.disconnectTimeout = disconnectTimeout;
 module.exports.PktType = PktType;
 module.exports.RsltType = RsltType;
 module.exports.ErrType = ErrType;
+module.exports.sensorType = sensorType;
 
 module.exports.pathSize = pathSize;
 module.exports.headerSize = headerSize;

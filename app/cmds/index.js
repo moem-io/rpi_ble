@@ -84,18 +84,6 @@ amqp.connect('amqp://node_rpi:node_rpi@localhost/nodeHost', function (err, conn)
   });
 });
 
-//TODO: Maybe not good solution for Global function. Assign to Other object.
-global.getAppIdFromReq = function (node, snsr) {
-  var appId = -1;
-  for (var i = 0; i < rCh.rQue.length; i++) {
-    if (rCh.rQue[i][0] === node && rCh.rQue[i][1] === snsr) {
-      appId = rCh.rQue[i][2];
-      break;
-    }
-  }
-  return appId;
-};
-
 
 var devPreset = function () {
   (env === "development") ? cmds.log("Develop ENV : Re-setting") : '';
