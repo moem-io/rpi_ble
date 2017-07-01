@@ -24,6 +24,10 @@ var _ = require('lodash');
 var cmdsBase = require('./cmds_base');
 var network = require('./network');
 
+var path = require("path");
+var env = process.env.NODE_ENV || "development";
+var config = require(path.join(__dirname, '../../config.json'))[env];
+
 var CmdsBle = function () {
   this.log = (str) => console.log("[APP] " + str);
   this.error = (str) => console.error("[APP] " + str);
@@ -70,7 +74,7 @@ var onConsume = function (q) {
   }, {noAck: true});
 };
 
-amqp.connect('amqp://node_rpi:node_rpi@localhost/nodeHost', function (err, conn) {
+amqp.connect(config.amqp, function (err, conn) {
   conn.createChannel(function (err, ch) {
     global.rCh = ch;
     rCh.rQue = [];

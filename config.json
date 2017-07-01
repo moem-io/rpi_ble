@@ -1,5 +1,6 @@
 {
   "development": {
+    "amqp": "amqp://node_rpi:node_rpi@localhost/nodeHost",
     "username" : "root",
     "password" : "blockbee",
     "host" : "localhost",
@@ -13,6 +14,7 @@
     "logging": false
   },
   "production": {
+    "amqp": "amqp://node_rpi:node_rpi@localhost/nodeHost",
     "username": "root",
     "password": "blockbee",
     "host": "localhost",
