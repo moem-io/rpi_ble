@@ -12,33 +12,33 @@ const headerSize = 7 + pathSize;
 const dataSize = 20;
 
 const PktType = {
-  SCAN_REQUEST: 1,
-  SCAN_RESPONSE: 2,
-  SNSR_STATE_REQUEST: 3, //
-  SNSR_STATE_RESPONSE: 4, //
-  SNSR_DATA_REQUEST: 5, //
-  SNSR_DATA_RESPONSE: 6, //
-  SNSR_ACTIVITY_REQUEST: 7, //
-  SNSR_ACTIVITY_RESPONSE: 8, //
-  SNSR_CMD_REQUEST: 9, //
-  SNSR_CMD_RESPONSE: 10, //
+  SCAN_REQ: 1,
+  SCAN_RES: 2,
+  SNSR_STAT_REQ: 3,
+  SNSR_STAT_RES: 4,
+  SNSR_DATA_REQ: 5,
+  SNSR_DATA_RES: 6,
+  SNSR_ACT_REQ: 7,
+  SNSR_ACT_RES: 8,
+  SNSR_CMD_REQ: 9,
+  SNSR_CMD_RES: 10,
 
-  NODE_STATUS_REQUEST: 17, //
-  NODE_STATUS_RESPONSE: 18, //
-  NODE_LED_REQUEST: 19,
-  NODE_LED_RESPONSE: 20,
-  NODE_BTN_PRESSED: 21,
-  NODE_BTN_PRESSED_RESPONSE: 22,
+  NODE_STAT_REQ: 17, //
+  NODE_STAT_RES: 18, //
+  NODE_LED_REQ: 19,
+  NODE_LED_RES: 20,
+  NODE_BTN_PRESS_REQ: 21,
+  NODE_BTN_PRESS_RES: 22,
 
-  NET_UPDATE_REQUEST: 101, //
-  NET_UPDATE_REQUEST_RESPONSE: 102,//
-  NET_ACK_REQUEST: 103, //
-  NET_ACK_RESPONSE: 104, //
-  NET_JOIN_REQUEST: 105, //
-  NET_JOIN_RESPONSE: 106, //
+  NET_UPDATE_REQ: 101, //
+  NET_UPDATE_RES: 102,//
+  NET_ACK_REQ: 103, //
+  NET_ACK_RES: 104, //
+  NET_JOIN_REQ: 105, //
+  NET_JOIN_RES: 106, //
 
-  SCAN_TARGET: 238,
-  SCAN_TARGET_RESPONSE: 239
+  SCAN_TGT_REQ: 238,
+  SCAN_TGT_RES: 239
 };
 
 const ErrType = {
@@ -58,9 +58,12 @@ const RsltType = {
 };
 
 const sensorType = {
-  'B': "[버튼]", 'H': "[사람인식]", 'S': "[소리]", 'R': "[LED]", 'I': "[IR]",
-  'Z': "[버저]", 'T': "[온습도]", 'P': "[압력]", 'L': "[조도]"
+  'T': "[온습도]", 'R': "[LED]", 'I': "[IR]", 'Z': "[버저]",
+  'B': "[버튼]", 'S': "[소리]", 'H': "[사람인식]", 'P': "[압력]", 'L': "[조도]"
 };
+
+//sensor_q(T) DATA_request
+//node_q, led_q(R), remote_q(I), buzzer_q(Z) CMD_request
 
 module.exports.BaseUuid = BaseUuid;
 module.exports.HeaderUuid = HeaderUuid;

@@ -22,7 +22,7 @@ function interpretPacket() {
     net = true;
   } else {
     switch (header.type) {
-      case cmdsBase.PktType.SCAN_RESPONSE:
+      case cmdsBase.PktType.SCAN_RES:
         net = true;
         app.net.responseCnt++;
         var len = pUtil.aData(data, 7);
@@ -35,42 +35,55 @@ function interpretPacket() {
         }
         break;
 
-      case cmdsBase.PktType.NODE_BTN_PRESSED:
-        proc.push(dispatchQue(header.type, 0, {in_node: header.src, in_sensor: header.srcSnsr}));
-        break;
-/////////////////////////////////////////////////////////////////////////////////////////////
-      case cmdsBase.PktType.SNSR_DATA_RESPONSE: //TODO: data must parse in here.
-        proc.push(dispatchQue(header.type, data, {in_node: header.src, in_sensor: header.srcSnsr}));
-        break;
-
-      case cmdsBase.PktType.NODE_LED_RESPONSE: //TODO: Maybe Log needed.
-        cmds.log("LED ON!!");
-        break;
-
-      case cmdsBase.PktType.SNSR_STATE_REQUEST:
-        var state = (data[0] !== 0) ? "부착되었습니다." : "떨어졌습니다.";
-        var msg = cmdsBase.sensorType[data[0]] + header.src + "번 노드의 " + header.srcSnsr + "번 센서가 " + state;
-        build.push(query.addLogData(msg, header.src, header.srcSnsr));
-        build.push(promisePBuild(cmdsBase.PktType.SNSR_STATE_RESPONSE, header.src, 0));
-        break;
-
-      case cmdsBase.PktType.SCAN_TARGET_RESPONSE:
-        var addr = pUtil.pData(data.subarray(0, 6), true, true);
-        var rssi = promiseRssi(data[6]);
-
-        proc.push(updateNetwork(header, addr, rssi));
-        break;
-
-      case cmdsBase.PktType.NET_ACK_RESPONSE:
+      case cmdsBase.PktType.NET_ACK_RES:
         app.dev.ackCnt++;
         if (app.dev.ackTot === app.dev.ackCnt) {
           app.dev.ack = true;
           cmds.log("Ack Result! No, addr, depth, status, active");
           proc.push(query.ackResult());
-        }
+        }//todo: not Tested.
         break;
 
-      case cmdsBase.PktType.NET_JOIN_REQUEST:
+      case cmdsBase.PktType.SCAN_TGT_RES:
+        var addr = pUtil.pData(data.subarray(0, 6), true, true);
+        var rssi = promiseRssi(data[6]);
+
+        proc.push(updateNet(header, addr, rssi));
+        break;
+
+      case cmdsBase.PktType.NODE_LED_RES: //TODO: Maybe Log needed.
+        cmds.log("LED ON!!");
+        break;
+
+      case cmdsBase.PktType.NODE_BTN_PRESS_REQ:
+        proc.push(dispatchQue(header.type, 0, {in_node: header.src, in_sensor: header.srcSnsr}));
+        build.push(promisePBuild(cmdsBase.PktType.NODE_BTN_PRESS_RES, header.src, header.srcSnsr, 0));
+        break;
+
+      case cmdsBase.PktType.SNSR_STAT_REQ:
+        var state = (data[0] !== 0) ? "부착되었습니다." : "떨어졌습니다.";
+        var msg = cmdsBase.sensorType[data[0]] + header.src + "번 노드의 " + header.srcSnsr + "번 센서가 " + state;
+        build.push(query.retrieveSnsr(header.src, header.srcSnsr, cmdsBase.sensorType[data[0]], (data[0] === 0) ? 0 : 1));
+        build.push(query.addLogData(msg, header.src, header.srcSnsr));
+        build.push(promisePBuild(cmdsBase.PktType.SNSR_STAT_RES, header.src, header.srcSnsr, 0));
+        break;
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+      case cmdsBase.PktType.SNSR_ACT_REQ: //TODO: data must parse in here. and send to Que.
+        build.push(promisePBuild(cmdsBase.PktType.SNSR_ACT_RES, header.src, header.srcSnsr, 0));
+        break; //todo: not Implemented
+
+      case cmdsBase.PktType.SNSR_DATA_RES: //TODO: data must parse in here.
+        proc.push(dispatchQue(header.type, data, {in_node: header.src, in_sensor: header.srcSnsr}));
+        break; //todo: not Implemented
+
+      case cmdsBase.PktType.SNSR_CMD_RES: ///////
+        cmds.log("CMD COMPLETE!!");
+        break; //todo: not Tested.
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+      case cmdsBase.PktType.NET_JOIN_REQ:
         break;
 
       default:
@@ -112,11 +125,11 @@ function errInterpret(header, data) {
           var proc = [];
           nets.forEach(net => { //Update Network status => Path Update. (Sequence must be Promise.
             if (net.Parent.nodeNo === src && net.Child.nodeNo === tgt) {
-              proc.push(query.updateNetwork({isActive: 0, netId: net.id}).then(() => network.calcPath(false)));
+              proc.push(query.updateNet({isActive: 0, netId: net.id}).then(() => network.calcPath(false)));
             } else {
               var tgtNode = (net.Parent.nodeNo === tgt) ? net.Child.nodeNo :
                 (net.Child.nodeNo === tgt) ? net.Parent.nodeNo : '';
-              build.push(promisePBuild(cmdsBase.PktType.SCAN_TARGET, tgtNode, tgt));
+              build.push(promisePBuild(cmdsBase.PktType.SCAN_TGT_REQ, tgtNode, 0, {scanTgt: tgt}));
             }
           });
           return proc;
@@ -129,7 +142,7 @@ function dispatchQue(type, data, opt) { //Maybe Async.
   var q_stack = [];
 
   switch (type) {
-    case cmdsBase.PktType.NODE_BTN_PRESSED:
+    case cmdsBase.PktType.NODE_BTN_PRESS_REQ:
       proc.push(query.getAppsByNode({nodeNo: opt.in_node, in_sensor: opt.in_sensor})
         .then(apps => {
           apps.forEach(app => q_stack.push({q_name: "app_" + app.app_id, q_msg: app.app_id + ',input,' + 1}));
@@ -137,7 +150,13 @@ function dispatchQue(type, data, opt) { //Maybe Async.
         }));
       return Promise.all(proc).then((res) => res[0].forEach(r => rCh.sendToQueue(r.q_name, Buffer.from(r.q_msg))));
 
-    case cmdsBase.PktType.SNSR_DATA_RESPONSE:////////////////////////////////////////////////////////////////////
+    case cmdsBase.PktType.SNSR_DATA_RES:////////////////////////////////////////////////////////////////////
+      proc.push(query.getAppsByNode({nodeNo: opt.in_node, in_sensor: opt.in_sensor})
+        .then(apps => {
+          apps.forEach(app => q_stack.push({q_name: "app_" + app.app_id, q_msg: app.app_id + ',input,' + 1}));
+          return q_stack;
+        }));
+      return Promise.all(proc).then((res) => res[0].forEach(r => rCh.sendToQueue(r.q_name, Buffer.from(r.q_msg))));
       break;
 
     case cmdsBase.ErrType.TARGET_ERROR:
@@ -152,8 +171,8 @@ function dispatchQue(type, data, opt) { //Maybe Async.
 //For Promising Data values, while in async.
 var promiseRssi = (rssi) => -(rssi);
 
-var promisePBuild = (type, tgtNode, tgt) => new Promise(resolve => {
-  setTimeout(() => resolve(pBuild.run(type, tgtNode, 0, {scanTgt: tgt})), tgtNode * 500) //Random Timeout;
+var promisePBuild = (type, tgtNode, tgtSnsr, opt) => new Promise(resolve => {
+  setTimeout(() => resolve(pBuild.run(type, tgtNode, tgtSnsr, opt)), tgtNode * 500) //Random Timeout;
 });
 
 //If None found, add Counter & Node
@@ -164,11 +183,11 @@ function onScanRes(addr, header, rssi) {
 }
 
 //Inactive or Update RSSI.
-function updateNetwork(header, addr, rssi) {
+function updateNet(header, addr, rssi) {
   return query.getNode({nodeNo: header.src}).then(src =>
     query.getNode({addr: addr}).then((tgt) => {
       chkNodeNo = tgt.nodeNo;
-      return query.retrieveNetwork({parent: src.id, child: tgt.id})
+      return query.retrieveNet({parent: src.id, child: tgt.id})
         .then((net) => net[0].updateAttributes((!rssi) ? {isActive: 0} : {rssi: rssi}))
     }))
 }

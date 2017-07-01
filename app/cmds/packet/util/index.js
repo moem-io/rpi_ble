@@ -32,25 +32,31 @@ var parseHeader = function (h) {
 var buildData = function (type, opt) {
   var buf = null;
   switch (type) {
-    case cmdsBase.PktType.SCAN_REQUEST:
-    case cmdsBase.PktType.NET_ACK_REQUEST:
-    case cmdsBase.PktType.SCAN_TARGET:
+    case cmdsBase.PktType.SCAN_REQ:
+    case cmdsBase.PktType.NET_ACK_REQ:
+    case cmdsBase.PktType.SCAN_TGT_REQ:
       buf = Buffer.from(parseData(opt.nodeAddr, true));
       break;
 
-    case cmdsBase.PktType.NODE_LED_REQUEST:
+    case cmdsBase.PktType.NODE_LED_REQ:
       buf = Buffer.from(opt.ledString);
       break;
 
-    case cmdsBase.PktType.NET_UPDATE_REQUEST:
+    case cmdsBase.PktType.NODE_BTN_PRESS_RES:
+    case cmdsBase.PktType.SNSR_STAT_RES:
+    case cmdsBase.PktType.SNSR_ACT_RES:
+    case cmdsBase.PktType.SNSR_DATA_REQ:
+      buf = Buffer.from([1]);
+      break;
+
+    case cmdsBase.PktType.SNSR_CMD_REQ:
+      buf = Buffer.from(opt.cmd);
+      break;
+
+    case cmdsBase.PktType.NET_UPDATE_REQ:
       buf = Buffer.from(opt.nodeData);
       break;
 
-    case cmdsBase.PktType.SNSR_STATE_RESPONSE:
-      buf = Buffer.from([1]);
-      break;
-    default:
-      break;
   }
 
   return buf;
