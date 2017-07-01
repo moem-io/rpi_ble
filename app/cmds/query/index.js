@@ -14,17 +14,17 @@ var addNode = function (nodeNo, parentNo, addr, rssi) {
 
   return getNode({nodeNo: parentNo})
     .then(p => retrieveNode({addr: addr, nodeNo: nodeNo, depth: p.depth + 1})
-      .spread((c, newRow) => (!newRow) ? retrieveNetwork({parent: p.id, child: c.id, rssi: rssi}) :
-        pBuild.run(cmdsBase.PktType.SCAN_REQUEST, c.nodeNo, 0)
-          .then(() => retrieveNetwork({parent: p.id, child: c.id, rssi: rssi}))))
-    .spread((net) => updateNetwork({rssi: rssi, netId: net.id}))
+      .spread((c, newRow) => (!newRow) ? retrieveNet({parent: p.id, child: c.id, rssi: rssi}) :
+        pBuild.run(cmdsBase.PktType.SCAN_REQ, c.nodeNo, 0)
+          .then(() => retrieveNet({parent: p.id, child: c.id, rssi: rssi}))))
+    .spread((net) => updateNet({rssi: rssi, netId: net.id}))
 };
 
 var ackNode = function () {
   return getAllNode().then(nodes => {
     cmds.log("Acking Node, Total : " + (nodes.length - 1));
     app.dev.ackTot = nodes.length;
-    return Promise.all(Object.values(nodes).map(node => pBuild.run(cmdsBase.PktType.NET_ACK_REQUEST, node.nodeNo, 0)))
+    return Promise.all(Object.values(nodes).map(node => pBuild.run(cmdsBase.PktType.NET_ACK_REQ, node.nodeNo, 0)))
   })
 };
 
@@ -49,17 +49,17 @@ var getNetsByNode = function (opt) { //gets isActive = 0,1 //not
     var where = {$or: [{parent: node.id}, {child: node.id}]};
     where['isActive'] = (opt.isActive) ? opt.isActive : 1;
 
-    return getAllNetwork(where);
+    return getAllNet(where);
   });
 };
 
-var getAllNetwork = function (where = {isActive: 1}) { //gets isActive = 1
+var getAllNet = function (where = {isActive: 1}) { //gets isActive = 1
   return db.Networks.findAll({
     where: where, include: [{model: db.Nodes, as: 'Parent'}, {model: db.Nodes, as: 'Child'}]
   });
 };
 
-var retrieveNetwork = function (opt) {
+var retrieveNet = function (opt) {
   return db.Networks.findOrCreate({
     where: {$or: [{parent: opt.parent, child: opt.child}, {parent: opt.child, child: opt.parent}]},
     defaults: {rssi: opt.rssi, parent: opt.parent, child: opt.child}
@@ -79,7 +79,7 @@ var updateNode = function (opt) {
   return db.Nodes.update(query, {where: where});
 };
 
-var updateNetwork = function (opt) {
+var updateNet = function (opt) {
   var query = {};
   (opt.isActive) ? query['isActive'] = opt.isActive : '';
   (opt.rssi) ? query['rssi'] = opt.rssi : '';
@@ -141,16 +141,19 @@ var getAllApp = function (opt) {
   return db.app.Apps.findAll({where: where})
 };
 
-var retrieveSnsr = function (opt) {
-  return db.Sensors.findOrCreate({where: {nodeId: opt.nodeId, sensorNo: opt.sensorNo}})
+var retrieveSnsr = function (nodeNo, sensorNo, type, isActive) { // problem with creating row of inActive Row.
+  return getNode({nodeNo: nodeNo}).then(node => db.Sensors.findOrCreate({
+      where: {nodeId: node.id, sensorNo: sensorNo}, defaults: {isActive: isActive, type: type}
+    }).spread((snsr, newRow) => (!newRow) ? updateSnsr({isActive: isActive, id: snsr.id}) : '')
+  )
 };
 
-var getSnsr = function (opt) {
-  return db.Sensors.findOne({where: {sensorNo: opt.sensorNo}})
+var getSnsr = function (nodeNo, sensorNo) {
+  return getNode({nodeNo: nodeNo}).then(node => db.Sensors.findOne({where: {nodeId: node.id, sensorNo: sensorNo}}))
 };
 
-var getAllSnsr = function (opt) {
-  return db.Sensors.findAll()
+var updateSnsr = function (isActive, snsrId) { //TODO: id key.
+  return db.Sensors.update({isActive: isActive}, {where: {id: snsrId}});
 };
 
 var addSnsrData = function (opt) {
@@ -181,9 +184,9 @@ module.exports.retrieveNode = retrieveNode;
 module.exports.ackNode = ackNode;
 
 module.exports.getNetsByNode = getNetsByNode;
-module.exports.getAllNetwork = getAllNetwork;
-module.exports.retrieveNetwork = retrieveNetwork;
-module.exports.updateNetwork = updateNetwork;
+module.exports.getAllNet = getAllNet;
+module.exports.retrieveNet = retrieveNet;
+module.exports.updateNet = updateNet;
 
 module.exports.addPath = addPath;
 module.exports.getPath = getPath;
@@ -193,8 +196,8 @@ module.exports.ackResult = ackResult;
 module.exports.updatePath = updatePath;
 module.exports.updatePathByNode = updatePathByNode;
 
-module.exports.retrieveSnsr = retrieveSnsr; //*
-module.exports.getAllSnsr = getAllSnsr; //*
+module.exports.retrieveSnsr = retrieveSnsr;
+module.exports.updateSnsr = updateSnsr;
 module.exports.getSnsr = getSnsr; //*
 
 module.exports.addSnsrData = addSnsrData; //*
