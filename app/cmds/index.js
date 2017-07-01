@@ -59,14 +59,20 @@ var onConsume = function (q) {
     var opt = null;
     var type = undefined;
     switch (q) {
-      case 'led_q':
       case 'node_q':
-        type = cmdsBase.PktType.NODE_LED_REQUEST;
+        type = cmdsBase.PktType.NODE_LED_REQ;
         opt = {ledString: data[3].toUpperCase()};
         break;
-      case 'sensor_q': //temp or humi
-        type = cmdsBase.PktType.SNSR_DATA_REQUEST;
-        opt = {type: data[3]};
+
+      case 'sensor_q': //Only temp or humi (DATA_REQUEST)
+        // TODO: (By using rCh.Que, get Temp or humi)
+        type = cmdsBase.PktType.SNSR_DATA_REQ;
+
+      case 'led_q': // (CMD_REQUEST)
+      case 'remote_q':
+      case 'buzzer_q':
+        type = cmdsBase.PktType.SNSR_CMD_REQ;
+        opt = {cmd: data[3]};
         break;
     }
 
@@ -79,7 +85,7 @@ amqp.connect(config.amqp, function (err, conn) {
     global.rCh = ch;
     rCh.rQue = [];
 
-    var queList = ['led_q', 'node_q', 'sensor_q', 'log_q'];
+    var queList = ['led_q', 'node_q', 'sensor_q', 'log_q', 'remote_q', 'buzzer_q'];
     queList.forEach(q => rCh.assertQueue(q, {durable: false}));
     cmds.log("AMQP Listening");
     queList.forEach(q => onConsume(q));
@@ -221,7 +227,7 @@ var netIdUpdate = function () {
     var nodeData = [];
     nodes.forEach(node => {
       if (node.nodeNo === app.dev.id) return;
-      nodeData.push(pBuild.run(cmdsBase.PktType.NET_UPDATE_REQUEST, node.nodeNo, 0));
+      nodeData.push(pBuild.run(cmdsBase.PktType.NET_UPDATE_REQ, node.nodeNo, 0));
     });
     return nodeData;
   }).then((proc) => Promise.all(proc))
