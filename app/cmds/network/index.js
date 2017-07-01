@@ -9,7 +9,7 @@ var calcPath = function (api = true) {
   var pathGraph = {'node': [], 'link': []};
   pathGraph['node'].push({name: 'Hub_0', radius: '10', rgb: '#5f5f5f'});
 
-  return query.getAllNetwork().then(net => net.forEach(
+  return query.getAllNet().then(net => net.forEach(
     conn => {
       G.addEdge(conn.Parent.nodeNo, conn.Child.nodeNo, {weight: Math.abs(conn.rssi)});
       cmds.log(conn.Parent.nodeNo + " -> " + conn.Child.nodeNo + " RSSI : " + conn.rssi);
