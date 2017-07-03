@@ -12,7 +12,7 @@ function interpretPacket() {
   var header = pUtil.pHeader(app.rxP[app.rxP.procCnt].header);
   var data = app.rxP[app.rxP.procCnt].data;
   var net = false;
-  var proc = [];
+  let proc = [];
   build = [];
   chkNodeNo = undefined;
 
@@ -26,13 +26,15 @@ function interpretPacket() {
         net = true;
         app.net.responseCnt++;
         var len = pUtil.aData(data, 7);
+        var pQue = [];
 
         for (var i = 0; i < len; i++) {
           var addr = pUtil.pData(data.subarray(i * 7, (i + 1) * 7 - 1), true, true);
           var rssi = promiseRssi(data[(i + 1) * 7 - 1]);
-
-          proc.push(onScanRes(addr, header, rssi));
+          pQue.push([addr, header, rssi]);
         }
+
+        proc.push(pQue.reduce((prev, que) => prev.then(() => onScanRes(que[0], que[1], que[2])), Promise.resolve(1)));
         break;
 
       case cmdsBase.PktType.NET_ACK_RES:
