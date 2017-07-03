@@ -65,7 +65,6 @@ var onConsume = function (q) {
         break;
 
       case 'sensor_q': //Only temp or humi (DATA_REQUEST)
-        // TODO: (By using rCh.Que, get Temp or humi)
         type = cmdsBase.PktType.SNSR_DATA_REQ;
 
       case 'led_q': // (CMD_REQUEST)
@@ -75,7 +74,7 @@ var onConsume = function (q) {
         opt = {cmd: data[3]};
         break;
     }
-
+    //data => [0] node [1] sensor [2] app_id [3] data
     (type !== undefined) ? pBuild.run(type, data[0], data[1], opt).then(() => cmds.emit('standBy')) : '';
   }, {noAck: true});
 };
@@ -93,6 +92,20 @@ amqp.connect(config.amqp, function (err, conn) {
     cmds.emit('init');
   });
 });
+
+//TODO: Maybe not good solution for Global function. Assign to Other object.
+global.getAppIdFromQue = function (node, snsr) {
+  var appId = -1;
+  for (var i = 0; i < rCh.rQue.length; i++) {
+    if (rCh.rQue[i][0] === node && rCh.rQue[i][1] === snsr) {
+      appId = rCh.rQue[i][2];
+      rCh.rQue.splice(i, 1); //remove from Queue
+      break;
+    }
+  }
+
+  return appId;
+};
 
 
 var devPreset = function () {

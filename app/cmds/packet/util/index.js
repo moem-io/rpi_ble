@@ -42,7 +42,7 @@ var buildData = function (type, opt) {
       buf = Buffer.from(opt.ledString);
       break;
 
-    case cmdsBase.PktType.NODE_BTN_PRESS_RES:
+    case cmdsBase.PktType.NODE_BTN_PRESS_RES: //TODO: deprecated
     case cmdsBase.PktType.SNSR_STAT_RES:
     case cmdsBase.PktType.SNSR_ACT_RES:
     case cmdsBase.PktType.SNSR_DATA_REQ:

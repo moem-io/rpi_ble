@@ -57,31 +57,32 @@ function interpretPacket() {
         cmds.log("LED ON!!");
         break;
 
-      case cmdsBase.PktType.NODE_BTN_PRESS_REQ:
-        proc.push(dispatchQue(header.type, 0, {in_node: header.src, in_sensor: header.srcSnsr}));
+      case cmdsBase.PktType.NODE_BTN_PRESS_REQ: //TODO: deprecated
+        proc.push(dispatchQue(header.type, 1, {in_node: header.src, in_sensor: header.srcSnsr}));
         build.push(promisePBuild(cmdsBase.PktType.NODE_BTN_PRESS_RES, header.src, header.srcSnsr, 0));
         break;
 
       case cmdsBase.PktType.SNSR_STAT_REQ:
         var state = (data[0] !== 0) ? "부착되었습니다." : "떨어졌습니다.";
         var msg = cmdsBase.sensorType[data[0]] + header.src + "번 노드의 " + header.srcSnsr + "번 센서가 " + state;
-        build.push(query.retrieveSnsr(header.src, header.srcSnsr, cmdsBase.sensorType[data[0]], (data[0] === 0) ? 0 : 1));
-        build.push(query.addLogData(msg, header.src, header.srcSnsr));
+        proc.push(query.retrieveSnsr(header.src, header.srcSnsr, cmdsBase.sensorType[data[0]], (data[0] === 0) ? 0 : 1));
+        proc.push(query.addLogData(msg, header.src, header.srcSnsr));
         build.push(promisePBuild(cmdsBase.PktType.SNSR_STAT_RES, header.src, header.srcSnsr, 0));
         break;
 
 /////////////////////////////////////////////////////////////////////////////////////////////
-      case cmdsBase.PktType.SNSR_ACT_REQ: //TODO: data must parse in here. and send to Que.
+      case cmdsBase.PktType.SNSR_ACT_REQ: //TODO: Not Tested. Might Prob with data Length. (data Parse)
+        proc.push(dispatchQue(header.type, data, {in_node: header.src, in_sensor: header.srcSnsr}));
         build.push(promisePBuild(cmdsBase.PktType.SNSR_ACT_RES, header.src, header.srcSnsr, 0));
         break; //todo: not Implemented
 
-      case cmdsBase.PktType.SNSR_DATA_RES: //TODO: data must parse in here.
+      case cmdsBase.PktType.SNSR_DATA_RES: //TODO: Not Tested. Might Prob with data Length. (data Parse)
         proc.push(dispatchQue(header.type, data, {in_node: header.src, in_sensor: header.srcSnsr}));
-        break; //todo: not Implemented
+        break;
 
-      case cmdsBase.PktType.SNSR_CMD_RES: ///////
+      case cmdsBase.PktType.SNSR_CMD_RES:
         cmds.log("CMD COMPLETE!!");
-        break; //todo: not Tested.
+        break;
 
 /////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -97,21 +98,14 @@ function interpretPacket() {
     .then(() => (net) ? network.calcPath() : '') //Update Path status
     .then(() => (chkNodeNo) ? nodeInactive(chkNodeNo) : '') //check Node if it's Active or Not.
     .then(() => network.calcPath()) //Update Path status
-    .then(() => {
-        if (build.length > 0) {
-          return Promise.all(build).then(() => {
-            app.txP.send = false;
-            app.rxP.procCnt++;
-            bleno.emit('interpretResult');
-          });
-        }
-        app.txP.send = false;
-        app.rxP.procCnt++;
-        bleno.emit('interpretResult');
-      }
-    );
+    .then(() => (build.length > 0) ? Promise.all(build).then(() => interpretRes()) : interpretRes());
 }
 
+var interpretRes = function () {
+  app.txP.send = false;
+  app.rxP.procCnt++;
+  bleno.emit('interpretResult');
+};
 
 function errInterpret(header, data) {
   var src = data[0], tgt = data[2];
@@ -139,27 +133,24 @@ function errInterpret(header, data) {
   }
 }
 
-function dispatchQue(type, data, opt) { //Maybe Async.
+function dispatchQue(type, data, opt) {
   var proc = [];
   var q_stack = [];
 
   switch (type) {
-    case cmdsBase.PktType.NODE_BTN_PRESS_REQ:
+    case cmdsBase.PktType.SNSR_ACT_REQ: //TODO: Not Tested
+    case cmdsBase.PktType.NODE_BTN_PRESS_REQ: //TODO: deprecated
       proc.push(query.getAppsByNode({nodeNo: opt.in_node, in_sensor: opt.in_sensor})
         .then(apps => {
-          apps.forEach(app => q_stack.push({q_name: "app_" + app.app_id, q_msg: app.app_id + ',input,' + 1}));
+          apps.forEach(app => q_stack.push({q_name: "app_" + app.app_id, q_msg: app.app_id + ',input,' + data}));
           return q_stack;
         }));
       return Promise.all(proc).then((res) => res[0].forEach(r => rCh.sendToQueue(r.q_name, Buffer.from(r.q_msg))));
 
-    case cmdsBase.PktType.SNSR_DATA_RES:////////////////////////////////////////////////////////////////////
-      proc.push(query.getAppsByNode({nodeNo: opt.in_node, in_sensor: opt.in_sensor})
-        .then(apps => {
-          apps.forEach(app => q_stack.push({q_name: "app_" + app.app_id, q_msg: app.app_id + ',input,' + 1}));
-          return q_stack;
-        }));
-      return Promise.all(proc).then((res) => res[0].forEach(r => rCh.sendToQueue(r.q_name, Buffer.from(r.q_msg))));
-      break;
+    case cmdsBase.PktType.SNSR_DATA_RES://TODO: Test. Proper Que?
+      var appId = getAppIdFromQue(opt.in_node, opt.in_sensor);
+      q_stack.push({q_name: "app_" + appId, q_msg: appId + ',input,' + data});
+      return Promise.all([rCh.sendToQueue(r.q_name, Buffer.from(r.q_msg))]);
 
     case cmdsBase.ErrType.TARGET_ERROR:
     case cmdsBase.ErrType.ROUTE_ERROR:
@@ -179,9 +170,12 @@ var promisePBuild = (type, tgtNode, tgtSnsr, opt) => new Promise(resolve => {
 
 //If None found, add Counter & Node
 function onScanRes(addr, header, rssi) {
+  var nodeNo = app.net.nodeCnt;
   return query.getNode({addr: addr})
-    .catch(Sql.EmptyResultError, () => app.net.nodeCnt++)
-    .then(() => query.addNode(app.net.nodeCnt, header.src, addr, rssi));
+    .catch(Sql.EmptyResultError, () => {
+      app.net.nodeCnt++;
+      nodeNo++;
+    }).then(() => query.addNode(nodeNo, header.src, addr, rssi));
 }
 
 //Inactive or Update RSSI.

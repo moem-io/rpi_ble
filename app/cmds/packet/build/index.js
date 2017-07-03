@@ -32,15 +32,15 @@ function buildPacket(type, target, targetSnsr, opt) {
       data = pUtil.bData(type, {ledString: opt.ledString});
       break;
 
-    case cmdsBase.PktType.NODE_BTN_PRESS_RES:
+    case cmdsBase.PktType.NODE_BTN_PRESS_RES: //TODO: deprecated
     case cmdsBase.PktType.SNSR_STAT_RES:
-    case cmdsBase.PktType.SNSR_ACT_RES: ///////
+    case cmdsBase.PktType.SNSR_ACT_RES:  ///////
     case cmdsBase.PktType.SNSR_DATA_REQ: /////// Data Req don't need data packet
       header = headerWithPath(type, target, targetSnsr);
       data = pUtil.bData(type, 0);
       break;
 
-    case cmdsBase.PktType.SNSR_CMD_REQ: ///////
+    case cmdsBase.PktType.SNSR_CMD_REQ: //TODO: NOT testeD
       header = headerWithPath(type, target, targetSnsr);
       data = pUtil.bData(type, {cmd: opt.cmd});
       break;
