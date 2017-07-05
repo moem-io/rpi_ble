@@ -127,13 +127,6 @@ var retrievePath = function (opt) {
     .spread((path, newRow) => (!newRow) ? path.updateAttributes({path: opt.path}) : true);
 };
 
-var getAppsByNode = function (opt) {
-  return getNode({nodeNo: opt.nodeNo}).then((node) => {
-    opt.in_node = node.id;
-    return getAllApp(opt);
-  });
-};
-
 //opt.*_node might be not Zero.
 var getAllApp = function (opt) {
   var where = (opt.in_node) ? {in_node: opt.in_node, in_sensor: opt.in_sensor} :
@@ -205,5 +198,4 @@ module.exports.addSnsrData = addSnsrData; //*
 module.exports.getSnsrData = getSnsrData; //*
 
 module.exports.getAllApp = getAllApp;
-module.exports.getAppsByNode = getAppsByNode;
 module.exports.addLogData = addLogData;

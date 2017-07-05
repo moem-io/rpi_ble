@@ -133,6 +133,10 @@ function errInterpret(header, data) {
   }
 }
 
+var isNotNull = function (val) { //TODO: Move to PktUtil
+  return val !== 0;
+};
+
 function dispatchQue(type, data, opt) {
   var proc = [];
   var q_stack = [];
@@ -140,9 +144,11 @@ function dispatchQue(type, data, opt) {
   switch (type) {
     case cmdsBase.PktType.SNSR_ACT_REQ: //TODO: Not Tested
     case cmdsBase.PktType.NODE_BTN_PRESS_REQ: //TODO: deprecated
-      proc.push(query.getAppsByNode({nodeNo: opt.in_node, in_sensor: opt.in_sensor})
+      console.log(opt.in_node, opt.in_sensor);
+      var parseData = data.filter(isNotNull);
+      proc.push(query.getAllApp({in_node: opt.in_node, in_sensor: opt.in_sensor})
         .then(apps => {
-          apps.forEach(app => q_stack.push({q_name: "app_" + app.app_id, q_msg: app.app_id + ',input,' + data}));
+          apps.forEach(app => q_stack.push({q_name: "app_" + app.app_id, q_msg: app.app_id + ',input,' + parseData}));
           return q_stack;
         }));
       return Promise.all(proc).then((res) => res[0].forEach(r => rCh.sendToQueue(r.q_name, Buffer.from(r.q_msg))));
@@ -165,7 +171,7 @@ function dispatchQue(type, data, opt) {
 var promiseRssi = (rssi) => -(rssi);
 
 var promisePBuild = (type, tgtNode, tgtSnsr, opt) => new Promise(resolve => {
-  setTimeout(() => resolve(pBuild.run(type, tgtNode, tgtSnsr, opt)), tgtNode * 500) //Random Timeout;
+  setTimeout(() => resolve(pBuild.run(type, tgtNode, tgtSnsr, opt)), tgtNode * 500); //Random Timeout;
 });
 
 //If None found, add Counter & Node
