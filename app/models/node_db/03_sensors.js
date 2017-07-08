@@ -1,7 +1,7 @@
 "use strict";
 
 module.exports = function (sql, SQL) {
-  var sensor_type = ['B', 'H', 'S', 'R', 'I', 'Z', 'T', 'P', 'L'];
+  var sensor_type = ['B', 'H', 'S', 'R', 'I', 'Z', 'T', 'P', 'L', '0'];
   var sensor_status = ['healthy', 'warning', 'error'];
   var Sensors = sql.define('Sensors', {
     id: {

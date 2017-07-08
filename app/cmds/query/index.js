@@ -18,7 +18,6 @@ var addNode = function (nodeNo, parentNo, addr, rssi) {
         pBuild.run(cmdsBase.PktType.SCAN_REQ, c.nodeNo, 0)
           .then(() => retrieveNet({parent: p.id, child: c.id, rssi: rssi}))))
     .spread((net) => updateNet({rssi: rssi, netId: net.id}))
-    .catch(err=>console.error(err));
 };
 
 var ackNode = function () {
@@ -138,8 +137,8 @@ var getAllApp = function (opt) {
 var retrieveSnsr = function (nodeNo, sensorNo, type, isActive) { // TODO: problem with creating row of inActive Row.
   return getNode({nodeNo: nodeNo}).then(node => db.Sensors.findOrCreate({
       where: {nodeId: node.id, sensorNo: sensorNo}, defaults: {isActive: isActive, type: type}
-    }).spread((snsr, newRow) => (!newRow) ? updateSnsr({isActive: isActive, id: snsr.id}) : '')
-  )
+    }).spread((snsr, newRow) => (!newRow) ? snsr.updateAttributes({isActive: isActive}) : '')
+  ).catch(e => console.log(e));
 };
 
 var getSnsr = function (nodeNo, sensorNo) {

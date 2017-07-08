@@ -64,8 +64,9 @@ function interpretPacket() {
 
       case cmdsBase.PktType.SNSR_STAT_REQ:
         var state = (data[0] !== 0) ? "부착되었습니다." : "떨어졌습니다.";
-        var msg = cmdsBase.sensorType[data[0]] + header.src + "번 노드의 " + header.srcSnsr + "번 센서가 " + state;
-        proc.push(query.retrieveSnsr(header.src, header.srcSnsr, cmdsBase.sensorType[data[0]], (data[0] === 0) ? 0 : 1));
+        var snsrType = (data[0] !== 0) ? String.fromCharCode(data[0]) : '0';
+        var msg = cmdsBase.sensorType[snsrType] + header.src + "번 노드의 " + header.srcSnsr + "번 센서가 " + state;
+        proc.push(query.retrieveSnsr(header.src, header.srcSnsr, snsrType, (data[0] === 0) ? 0 : 1));
         proc.push(query.addLogData(msg, header.src, header.srcSnsr));
         build.push(promisePBuild(cmdsBase.PktType.SNSR_STAT_RES, header.src, header.srcSnsr, 0));
         break;

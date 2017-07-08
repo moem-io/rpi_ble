@@ -4,7 +4,7 @@ const Data1Uuid = '00009002000000108000001122334455';
 const Data2Uuid = '00009003000000108000001122334455';
 const ResultUuid = '00009004000000108000001122334455';
 
-const scanTimeout = 1000;
+const scanTimeout = 5000;
 const disconnectTimeout = 100;
 
 const pathSize = 5;
