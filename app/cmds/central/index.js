@@ -39,7 +39,7 @@ noble.on('scanStop', () => {
           cnt++;
         }
 
-      })).then(() => (cnt) ? cmds.emit('netAck') : restartScan()) //after Scanned, Build Ack Packet.
+      })).then(() => (cnt) ? cmds.emit('netAck') : restartScan()); //after Scanned, Build Ack Packet.
     } else {
       Promise.all(nodes.map((uuid) => {
         var node = noble._peripherals[uuid];
@@ -63,6 +63,7 @@ function restartScan() {
 }
 
 function cmdsConn(node) {
+  cmds.log("Trying to Connect " + node.advertisement.localName + " " + node.address);
   target = node;
   node.connect((err) => {
     noble.log("Connecting to " + node.address);

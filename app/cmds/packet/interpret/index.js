@@ -71,7 +71,6 @@ function interpretPacket() {
         build.push(promisePBuild(cmdsBase.PktType.SNSR_STAT_RES, header.src, header.srcSnsr, 0));
         break;
 
-/////////////////////////////////////////////////////////////////////////////////////////////
       case cmdsBase.PktType.SNSR_ACT_REQ: //TODO: Not Tested. Might Prob with data Length. (data Parse)
         proc.push(dispatchQue(header.type, data, {in_node: header.src, in_sensor: header.srcSnsr}));
         build.push(promisePBuild(cmdsBase.PktType.SNSR_ACT_RES, header.src, header.srcSnsr, 0));
@@ -84,8 +83,6 @@ function interpretPacket() {
       case cmdsBase.PktType.SNSR_CMD_RES:
         cmds.log("CMD COMPLETE!!");
         break;
-
-/////////////////////////////////////////////////////////////////////////////////////////////
 
       case cmdsBase.PktType.NET_JOIN_REQ:
         break;

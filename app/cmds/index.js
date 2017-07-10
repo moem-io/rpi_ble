@@ -71,11 +71,18 @@ var onConsume = function (q) {
       case 'remote_q':
       case 'buzzer_q':
         type = cmdsBase.PktType.SNSR_CMD_REQ;
-        opt = {cmd: data[3]};
+        var dataStr = (data[3] === 0) ? '000000' : data[3];
+        opt = {cmd: dataStr};
         break;
     }
     //data => [0] node [1] sensor [2] app_id [3] data
-    (type !== undefined) ? pBuild.run(type, data[0], data[1], opt).then(() => cmds.emit('standBy')) : '';
+    (type !== undefined) ? pBuild.run(type, data[0], data[1], opt).then(() => {
+        if (q === 'led_q') {
+          cmds.log("ready")
+        } else {
+          cmds.emit('standBy')
+        }
+      }) : '';
   }, {noAck: true});
 };
 
@@ -252,10 +259,11 @@ var onCScan = function () {
 };
 
 var findRoute = function (target) {
+  cmds.log("Finding Route");
   return query.getNode({nodeNo: target})
     .then(n1 => (app.net.disc[n1.addr]) ? app.net.disc[n1.addr] : query.getPath({nodeId: n1.id})
-      .then(res => query.getNode({nodeNo: res.path[0]}))
-      .then(n2 => (app.net.disc[n2.addr]) ? app.net.disc[n2.addr] : reject("Error"))
+        .then(res => query.getNode({nodeNo: res.path[0]}))
+        .then(n2 => (app.net.disc[n2.addr]) ? app.net.disc[n2.addr] : reject("Error"))
     )
 };
 
